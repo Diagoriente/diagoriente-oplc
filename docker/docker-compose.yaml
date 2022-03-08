@@ -1,0 +1,21 @@
+version: '3.3'
+services:
+    frontend:
+        image: $COMPOSE_PROJECT_NAME/frontend:$VERSION
+        build:
+            context: ../
+            dockerfile: docker/frontend.Dockerfile
+        ports:
+           - $FRONTEND_PORT:3000
+        restart: unless-stopped
+    backend:
+        image: $COMPOSE_PROJECT_NAME/backend:$VERSION
+        build:
+            context: ../
+            dockerfile: docker/backend.Dockerfile
+        environment:
+            CORS_ALLOWED_ORIGINS: $CORS_ALLOWED_ORIGINS
+            GENIE_ENV: $GENIE_ENV
+        restart: unless-stopped
+        ports:
+           - $BACKEND_PORT:8000
