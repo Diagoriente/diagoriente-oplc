@@ -4,7 +4,7 @@ set -euo pipefail
 
 VERSION=$(./version.sh)
 
-TMPDIR=$(mktemp -d)
+TMPDIR="/tmp/diagoriente-oplc/"
 echo "Created temp dir $TMPDIR"
 
 DOCKER_IMAGE_LOCAL_FRONTEND=$TMPDIR/docker_images/$VERSION/frontend.tar
@@ -22,7 +22,7 @@ RELEASE="${VERSION}-$(date -u --iso=seconds)"
 
 echo "Sending docker images."
 ssh ovh-vps-test "mkdir -p Diagoriente-Oplc/docker_images/$VERSION"
-rsync -avzHXS --numeric-ids --info=progress2 \
+rsync -avHXS --numeric-ids --info=progress2 \
     $TMPDIR/docker_images/$VERSION/frontend.tar \
     $TMPDIR/docker_images/$VERSION/backend.tar \
     ovh-vps-test:Diagoriente-Oplc/docker_images/$VERSION/
@@ -33,8 +33,8 @@ ssh ovh-vps-test "docker load -i Diagoriente-Oplc/docker_images/$VERSION/fronten
 
 echo "Creating release ovh-vps-test:Diagoriente-Oplc/$RELEASE"
 ssh ovh-vps-test mkdir -p Diagoriente-Oplc/releases/$RELEASE
-rsync -avz --info=progress2 .env-production ovh-vps-test:Diagoriente-Oplc/releases/$RELEASE/.env
-rsync -avz --info=progress2 \
+rsync -av --info=progress2 .env-production ovh-vps-test:Diagoriente-Oplc/releases/$RELEASE/.env
+rsync -av --info=progress2 \
     .version \
     docker/docker-compose.yaml \
     ovh-vps-test:Diagoriente-Oplc/releases/$RELEASE
