@@ -1,3 +1,10 @@
 .env
 .env*
 .version
+
+**/__pycache__
+**/.venv
+**/.mypy_cache
+**/.pytest_cache
+
+/frontend/node_modules

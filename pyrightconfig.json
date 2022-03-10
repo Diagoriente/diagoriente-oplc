@@ -1,0 +1,13 @@
+{
+    "include": ["backend/python/oplc"],
+    "exclude": [
+        "**/__pycache__"
+    ],
+    "typeCheckingMode": "strict",
+    "extraPaths": ["backend/python/"],
+    "venvPath": "backend/python/.venv",
+    "useLibraryCodeForTypes": false,
+    "reportUnknownVariableType": false,
+    "reportUnknownMemberType": false,
+    "reportMissingTypeStubs": false
+}

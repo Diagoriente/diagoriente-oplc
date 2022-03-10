@@ -15,7 +15,7 @@ services:
             dockerfile: docker/backend.Dockerfile
         environment:
             CORS_ALLOWED_ORIGINS: $CORS_ALLOWED_ORIGINS
-            GENIE_ENV: $GENIE_ENV
+            API_ROOT_PATH: $API_ROOT_PATH
         restart: unless-stopped
         ports:
            - $BACKEND_PORT:8000
