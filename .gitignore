@@ -3,6 +3,7 @@
 .version
 
 data/
+scratch
 
 **/__pycache__
 **/.venv
