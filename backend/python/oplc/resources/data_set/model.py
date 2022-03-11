@@ -6,10 +6,12 @@ from oplc.constants import DATASET_CACHE_DIR
 
 @dataclass(frozen=True)
 class LocalCsv:
+    name: str
     path: Path
 
 @dataclass(frozen=True)
 class GoogleDocsCsv:
+    name: str
     key: str
     gid: str
 

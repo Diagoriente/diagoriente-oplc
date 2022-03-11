@@ -1,22 +1,22 @@
-from pydantic import BaseModel, Field
-from typing import Annotated, Union, Literal
-from oplc.resources.data_set.model import DataSet, LocalCsv, GoogleDocsCsv
-from pathlib import Path
+from pydantic import BaseModel
 
-class LocalCsvJson(BaseModel):
-    kind: Literal['local_csv']
-    path: Path
+from oplc.constants import DEFAULT_DATA_SET
 
-    def to_data_set(self) -> DataSet:
-        return LocalCsv(path=self.path)
+from .model import DataSet
 
-class GoogleDocsCsvJson(BaseModel):
-    kind: Literal['google_docs_csv']
-    key: str
-    gid: str
+class DataSetJson(BaseModel):
+    name: str
 
-    def to_data_set(self) -> DataSet:
-        return GoogleDocsCsv(key=self.key, gid=self.gid)
+    @staticmethod
+    def from_data_set(ds: DataSet) -> "DataSetJson":
+        return DataSetJson(name=ds.name)
 
-DataSetJson = Annotated[Union[LocalCsvJson, GoogleDocsCsvJson], Field(..., discriminator='kind') ]
 
+class DataSetsJson(BaseModel):
+    default: str
+    datasets: list[str]
+
+    @staticmethod
+    def from_data_sets(dss: list[DataSet]) -> "DataSetsJson":
+        return DataSetsJson(default=DEFAULT_DATA_SET,
+                            datasets=[ds.name for ds in dss])
