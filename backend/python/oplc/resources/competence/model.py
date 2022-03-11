@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
-class Competence(BaseModel):
+@dataclass(frozen=True)
+class Competence:
     name: str
 

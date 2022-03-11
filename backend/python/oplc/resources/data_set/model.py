@@ -1,13 +1,15 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
 from oplc.constants import DATASET_CACHE_DIR
 
 
-class LocalCsv(BaseModel, frozen=True):
+@dataclass(frozen=True)
+class LocalCsv:
     path: Path
 
-class GoogleDocsCsv(BaseModel, frozen=True):
+@dataclass(frozen=True)
+class GoogleDocsCsv:
     key: str
     gid: str
 

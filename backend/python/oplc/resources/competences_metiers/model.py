@@ -1,10 +1,11 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 import pandas as pa
 from typing import Iterable
 from oplc.resources.metier.model import Metier
 from oplc.resources.competence.model import Competence
 
-class CompetencesMetiers(BaseModel, frozen=True, arbitrary_types_allowed=True):
+@dataclass(frozen=True)
+class CompetencesMetiers:
     df: pa.DataFrame
 
     def metiers(self) -> list[Metier]:
