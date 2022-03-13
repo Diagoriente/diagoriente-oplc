@@ -2,11 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from oplc.constants import CORS_ALLOWED_ORIGINS, API_ROOT_PATH
 
-from oplc.resources.metier.views import MetierJson
-from oplc.resources.competence.views import CompetenceJson
-from oplc.resources.competences_metiers.controller import competences_metiers
-from oplc.resources.data_set.views import DataSetJson, DataSetsJson
-from oplc.resources.data_set.controller import data_set, data_sets
+from oplc.view import DataSetsJson, DataSetJson, MetiersJson, CompetencesJson
+from oplc.effect import updated_data_set, empty_effect
+from oplc.action import update_data_set, identity_action
+from oplc.loop import update
+
+# TODO: configure this
+import logging
+logging.getLogger().setLevel(logging.INFO)
+
 
 app = FastAPI(root_path=API_ROOT_PATH)
 
@@ -20,16 +24,29 @@ app.add_middleware(
 
 @app.get("/data_sets")
 async def get_data_sets() -> DataSetsJson:
-    return DataSetsJson.from_data_sets(data_sets())
+    return update(
+            msg=None,
+            effect=empty_effect,
+            action=identity_action,
+            view=DataSetsJson.view_model)
+
 
 @app.post("/metiers")
-async def post_metiers(dataset: DataSetJson) -> list[MetierJson]:
-    ds = data_set(dataset.name)
-    return [MetierJson.from_metier(m) 
-            for m in competences_metiers(ds).metiers()]
+async def post_metiers(dataset: DataSetJson) -> MetiersJson:
+    global state
+    return update(
+            msg=dataset.name,
+            effect=updated_data_set(),
+            action=update_data_set,
+            view=MetiersJson.view_model)
+
 
 @app.post("/competences")
-async def post_competences(dataset: DataSetJson) -> list[CompetenceJson]:
-    ds = data_set(dataset.name)
-    return [CompetenceJson.from_competence(m)
-            for m in competences_metiers(ds).competences()]
+async def post_competences(dataset: DataSetJson) -> CompetencesJson:
+    # Interpret input
+    return update(
+            msg=dataset.name,
+            effect=updated_data_set(),
+            action=update_data_set,
+            view=CompetencesJson.view_model)
+
