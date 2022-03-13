@@ -8,7 +8,7 @@ export const CompetenceSelector: React.FC = () => {
   const [competences] = useFromBackend<OrderedSet<Competence>>("competences",
     {dataset: {name: "local test csv"}},
     [],
-    (r: any[]) => OrderedSet<Competence>(r.map(competence)).sort(lessThan));
+    (r: any) => OrderedSet<Competence>(r.competences.map(competence)).sort(lessThan));
 
   const [selected, setSelected] = useState<OrderedSet<Competence> | undefined>(undefined);
   const [notSelected, setNotSelected] = useState<OrderedSet<Competence> | undefined>(undefined);

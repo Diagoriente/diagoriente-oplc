@@ -8,10 +8,7 @@ export const ListeMetiers: React.FC = () => {
   const [metiers] = useFromBackend<OrderedSet<Metier>>("metiers",
     {dataset: {name: "local test csv"}},
     [],
-    (r: any[]) => {
-      const res = OrderedSet(r.map(metier)).sort();
-      return res;
-    })
+    (r: any) => OrderedSet<Metier>(r.metiers.map(metier)).sort())
 
   return (
     <Box>
