@@ -4,7 +4,7 @@ import {RecommendationsMetiers} from './views/RecommendationsMetiers/Recommendat
 
 function App() {
   return (
-    <div className="App">
+    <div className="App bg-gray-100">
       <header className="App-header">
         <RecommendationsMetiers/>
       </header>

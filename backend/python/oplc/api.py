@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from oplc.constants import CORS_ALLOWED_ORIGINS, API_ROOT_PATH
+from oplc.constants import CORS_ALLOWED_ORIGINS, API_ROOT_PATH, DEFAULT_DATA_SET
 from typing import Optional
 
-from oplc.view import DataSetsJson, DataSetJson, MetiersJson, CompetencesJson
-from oplc.effect import updated_data_set
-from oplc.action import update_data_set
+from oplc.view import (
+        DataSetsJson, DataSetJson, MetierJson, CompetenceJson,
+        MetiersSuggestionJson, decode_competences_json, view_metiers_json,
+        view_competences_json)
+import oplc.effect as effect
 from oplc.state import State
 
 # TODO: configure this
@@ -31,20 +33,35 @@ async def get_data_sets() -> Optional[DataSetsJson]:
 
 
 @app.post("/metiers")
-async def post_metiers(dataset: DataSetJson) -> Optional[MetiersJson]:
+async def post_metiers(
+        dataset: Optional[DataSetJson] = None
+        ) -> Optional[list[MetierJson]]:
     with State() as s:
-        ds = s.data_sets[dataset.name]
-        cm = updated_data_set(ds, s)
-        s = update_data_set(ds, cm, s)
+        ds = dataset and dataset.decode(s) or s.data_sets[DEFAULT_DATA_SET]
+        s = effect.load_data_set(ds, s)
         metiers = s.competences_metiers[ds].metiers()
-        return MetiersJson.view(metiers)
+        return view_metiers_json(metiers)
 
 
 @app.post("/competences")
-async def post_competences(dataset: DataSetJson) -> Optional[CompetencesJson]:
+async def post_competences(
+        dataset: Optional[DataSetJson] = None
+        ) -> Optional[list[CompetenceJson]]:
     with State() as s:
-        ds = dataset.decode(s)
-        cm = updated_data_set(ds, s)
-        s = update_data_set(ds, cm, s)
+        ds = dataset and dataset.decode(s) or s.data_sets[DEFAULT_DATA_SET]
+        s = effect.load_data_set(ds, s)
         competences = s.competences_metiers[ds].competences()
-        return CompetencesJson.view(competences)
+        return view_competences_json(competences)
+
+
+@app.post("/metiers_suggestion")
+async def post_metiers_suggestion(
+        competences: list[CompetenceJson],
+        dataset: Optional[DataSetJson] = None,
+        ) -> Optional[MetiersSuggestionJson]:
+    with State() as s:
+        ds = dataset and dataset.decode(s) or s.data_sets[DEFAULT_DATA_SET]
+        s = effect.load_data_set(ds, s)
+        cm = s.competences_metiers[ds]
+        return MetiersSuggestionJson.view(
+                cm.metiers_suggestion(decode_competences_json(competences)))

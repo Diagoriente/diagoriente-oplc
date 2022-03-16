@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union, Iterator
+from typing import Union, Iterable, Iterator
 from oplc.constants import DATASET_CACHE_DIR
 import pandas as pa
 
@@ -38,6 +38,14 @@ class Competence:
 
 
 @dataclass(frozen=True)
+class MetiersSuggestion:
+    scores: pa.Series
+
+    def items(self) -> Iterable[tuple[Metier, float]]:
+        return [(Metier(name=str(n)), s) for n, s in self.scores.items()]
+
+
+@dataclass(frozen=True)
 class CompetencesMetiers:
     df: pa.DataFrame
 
@@ -49,9 +57,17 @@ class CompetencesMetiers:
         cs: Iterator[str] = iter(self.df.columns)
         return [Competence(name=c) for c in cs]
 
+    def metiers_suggestion(
+            self,
+            competences: list[Competence],
+            ) -> MetiersSuggestion:
+        index = [c.name for c in competences]
+        scores: pa.Series = self.df.loc[:, index].sum(axis=1)
+        scores = scores.loc[scores > 0].sort_values(ascending=False)
+        return MetiersSuggestion(scores=scores)
+
 
 @dataclass(frozen=True)
 class Model:
     competences_metiers: dict[DataSet, CompetencesMetiers]
     data_sets: dict[str, DataSet]
-

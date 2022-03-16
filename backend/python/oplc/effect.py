@@ -1,6 +1,7 @@
 import pandas as pa
 import requests
 from requests.exceptions import HTTPError
+from dataclasses import replace
 
 from oplc.model import CompetencesMetiers, DataSet, GoogleDocsCsv, Model
 import logging
@@ -38,20 +39,21 @@ def is_cached(ds: DataSet) -> bool:
         return True
 
 
-def updated_data_set(ds: DataSet, model: Model, force_update: bool = False) -> CompetencesMetiers:
-    do_pull = not is_cached(ds) or force_update
+def load_data_set(ds: DataSet, state: Model, always_update: bool = False) -> Model:
+    do_pull = not is_cached(ds) or always_update
 
     if do_pull:
         logging.info(f"Data set pull from source requested for {ds.name} .")
         pull_source(ds)
 
-    if do_pull or ds not in model.competences_metiers:
+    if do_pull or ds not in state.competences_metiers:
         logging.info(f"Data set update requested for {ds.name} .")
         df = data_frame(ds)
         cm = CompetencesMetiers(df=df) # type:ignore
-        return cm
+        return replace(state,
+            competences_metiers= state.competences_metiers | {ds: cm})
     else:
-        return model.competences_metiers[ds]
+        return state
 
 
 

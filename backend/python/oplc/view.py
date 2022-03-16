@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from oplc.constants import DEFAULT_DATA_SET
-from oplc.model import DataSet, Metier, Competence, Model
+from oplc.model import DataSet, Metier, Competence, Model, MetiersSuggestion
 
 from typing import Callable, TypeVar
 
@@ -15,7 +15,7 @@ class MetierJson(BaseModel, frozen=True):
 
     @staticmethod
     def view(m: Metier) -> "MetierJson":
-        return MetierJson.construct(name=m.name)
+        return MetierJson(name=m.name)
 
 
 class CompetenceJson(BaseModel, frozen=True):
@@ -24,6 +24,9 @@ class CompetenceJson(BaseModel, frozen=True):
     @staticmethod
     def view(m: Competence) -> "CompetenceJson":
         return CompetenceJson(name=m.name)
+
+    def decode(self) -> Competence:
+        return Competence(name=self.name)
 
 
 
@@ -51,20 +54,30 @@ class DataSetsJson(BaseModel):
                             datasets=[ds.name for ds in dss.values()])
 
 
-class MetiersJson(BaseModel):
-    metiers: list[MetierJson]
+
+def view_metiers_json(metiers: list[Metier]) -> list[MetierJson]:
+    return [MetierJson.view(m) for m in metiers]
+
+
+def view_competences_json(competences: list[Competence]) -> list[CompetenceJson]:
+    return [CompetenceJson.view(c) for c in competences]
+
+
+def decode_competences_json(competences: list[CompetenceJson]) -> list[Competence]:
+    return [c.decode() for c in competences]
+
+
+class MetierWithScoreJson(BaseModel):
+    metier: MetierJson
+    score: float
+
+
+class MetiersSuggestionJson(BaseModel):
+    scores: list[MetierWithScoreJson]
 
     @staticmethod
-    def view(metiers: list[Metier]) -> "MetiersJson":
-        return MetiersJson(metiers=[MetierJson.view(m)
-            for m in metiers])
-
-
-class CompetencesJson(BaseModel):
-    competences: list[CompetenceJson]
-
-    @staticmethod
-    def view(competences: list[Competence]) -> "CompetencesJson":
-        return CompetencesJson(
-                competences=[CompetenceJson.view(c)
-                    for c in competences])
+    def view(metiers_suggestion: MetiersSuggestion) -> "MetiersSuggestionJson":
+        scores = [
+            MetierWithScoreJson(metier=MetierJson.view(m), score=s)
+            for m, s in metiers_suggestion.items()]
+        return MetiersSuggestionJson(scores=scores)

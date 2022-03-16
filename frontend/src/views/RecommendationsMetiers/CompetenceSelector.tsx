@@ -2,27 +2,34 @@ import React, {useState, useEffect} from 'react';
 import useFromBackend from 'hooks/useFromBackend';
 import Box from 'components/Box';
 import {OrderedSet} from 'immutable';
-import {Competence, competence, lessThan} from 'utils/helpers/Competences';
+import {Competence, lessThan} from 'utils/helpers/Competences';
 import {DataSet} from 'utils/helpers/DataSets';
 
-export const CompetenceSelector: React.FC<{dataSet: DataSet}> = ({dataSet}) => {
+export const CompetenceSelector: React.FC<{
+    dataSet: DataSet,
+    selected: OrderedSet<Competence> | undefined,
+    setSelected: (competences: OrderedSet<Competence> | undefined) => void
+    }> = ({
+    dataSet,
+    selected,
+    setSelected
+    }) => {
   const [competences] = useFromBackend<OrderedSet<Competence>>("competences",
     {dataset: dataSet},
     [],
-    (r: any) => OrderedSet<Competence>(r.competences.map(competence)).sort(lessThan));
+    (r: any) => OrderedSet<Competence>(r.map(Competence)).sort(lessThan));
 
-  const [selected, setSelected] = useState<OrderedSet<Competence> | undefined>(undefined);
   const [notSelected, setNotSelected] = useState<OrderedSet<Competence> | undefined>(undefined);
 
   const [filter, setFilter] = useState<string>("");
 
   useEffect(() => {
     if(selected === undefined && notSelected === undefined && competences !== undefined) {
-      setSelected(() => OrderedSet([]));
+      setSelected(OrderedSet([]));
       setNotSelected(() => OrderedSet(competences).sort(lessThan));
     }
   },
-  [competences, setSelected, setNotSelected]);
+  [competences, selected, notSelected, setSelected, setNotSelected]);
 
   const select = (c: Competence) => {
     setSelected(selected?.add(c).sort(lessThan));
@@ -38,7 +45,9 @@ export const CompetenceSelector: React.FC<{dataSet: DataSet}> = ({dataSet}) => {
     <Box>
       <div className="flex flex-col">
 
-        <label className="font-bold underline" htmlFor="competences-search">
+        <label 
+          className="font-bold underline text-center" 
+          htmlFor="competences-search">
           Sélectionnez des compétences :
         </label>
 
