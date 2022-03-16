@@ -14,6 +14,14 @@ const DataSetSelector: React.FC<{
       datasets: r.datasets.map((name: string) => DataSet({name: name})),
     }));
 
+  useEffect(() => {
+      if(current === undefined && dataSets !== undefined && dataSets.default.name !== "") {
+        onSelect(dataSets.default)
+      }
+    },
+    [dataSets]
+  );
+
   return (
     <Box>
       <div className="text-left">

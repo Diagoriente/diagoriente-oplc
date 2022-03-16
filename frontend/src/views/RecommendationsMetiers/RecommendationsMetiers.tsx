@@ -15,8 +15,12 @@ export const RecommendationsMetiers: React.FC = () => {
     <div className="flex flex-col">
       <DataSetSelector current={dataSet} onSelect={setDataSet}/>
       <div className="flex flex-row">
-        <CompetenceSelector/>
-        <ListeMetiers/>
+        { dataSet === undefined ? <></> :
+          <>
+            <CompetenceSelector dataSet={dataSet}/>
+            <ListeMetiers dataSet={dataSet}/>
+          </>
+        }
       </div>
     </div>
   );

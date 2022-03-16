@@ -3,10 +3,11 @@ import useFromBackend from 'hooks/useFromBackend';
 import Box from 'components/Box';
 import {OrderedSet} from 'immutable';
 import {Competence, competence, lessThan} from 'utils/helpers/Competences';
+import {DataSet} from 'utils/helpers/DataSets';
 
-export const CompetenceSelector: React.FC = () => {
+export const CompetenceSelector: React.FC<{dataSet: DataSet}> = ({dataSet}) => {
   const [competences] = useFromBackend<OrderedSet<Competence>>("competences",
-    {dataset: {name: "local test csv"}},
+    {dataset: dataSet},
     [],
     (r: any) => OrderedSet<Competence>(r.competences.map(competence)).sort(lessThan));
 
