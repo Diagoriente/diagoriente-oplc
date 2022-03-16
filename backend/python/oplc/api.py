@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from oplc.constants import CORS_ALLOWED_ORIGINS, API_ROOT_PATH
 
 from oplc.view import DataSetsJson, DataSetJson, MetiersJson, CompetencesJson
-from oplc.effect import updated_data_set, empty_effect
-from oplc.action import update_data_set, identity_action
-from oplc.loop import update
+from oplc.effect import updated_data_set
+from oplc.action import update_data_set
+from oplc.state import get_state, run_action
 
 # TODO: configure this
 import logging
@@ -24,29 +24,24 @@ app.add_middleware(
 
 @app.get("/data_sets")
 async def get_data_sets() -> DataSetsJson:
-    return update(
-            msg=None,
-            effect=empty_effect,
-            action=identity_action,
-            view=DataSetsJson.view_model)
+    return DataSetsJson.view(get_state().data_sets)
 
 
 @app.post("/metiers")
 async def post_metiers(dataset: DataSetJson) -> MetiersJson:
-    global state
-    return update(
-            msg=dataset.name,
-            effect=updated_data_set(),
-            action=update_data_set,
-            view=MetiersJson.view_model)
+    state = get_state()
+    ds = state.data_sets[dataset.name]
+    cm = updated_data_set(ds)
+    run_action(update_data_set(ds, cm))
+    return MetiersJson.view(get_state().competences_metiers[ds].metiers())
 
 
 @app.post("/competences")
 async def post_competences(dataset: DataSetJson) -> CompetencesJson:
-    # Interpret input
-    return update(
-            msg=dataset.name,
-            effect=updated_data_set(),
-            action=update_data_set,
-            view=CompetencesJson.view_model)
+    state = get_state()
+    ds = state.data_sets[dataset.name]
+    cm = updated_data_set(ds)
+    run_action(update_data_set(ds, cm))
+    return CompetencesJson.view(get_state().competences_metiers[ds].competences())
+
 

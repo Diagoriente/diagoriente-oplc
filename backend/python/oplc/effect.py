@@ -1,10 +1,10 @@
 import pandas as pa
 import requests
 from requests.exceptions import HTTPError
-from typing import Callable, TypeVar, Any, Tuple
 
-from oplc.model import Model, CompetencesMetiers, DataSet, GoogleDocsCsv
+from oplc.model import CompetencesMetiers, DataSet, GoogleDocsCsv
 import logging
+from oplc.state import get_state
 
 
 def pull_source(ds: DataSet) -> None:
@@ -27,9 +27,9 @@ def pull_source(ds: DataSet) -> None:
 
 def data_frame(ds: DataSet) -> pa.DataFrame :
     if isinstance(ds, GoogleDocsCsv):
-        return pa.read_csv(ds.cache_path(), index_col=0)
+        return pa.DataFrame(pa.read_csv(ds.cache_path(), index_col=0))
     else:
-        return pa.read_csv(ds.path, index_col=0)
+        return pa.DataFrame(pa.read_csv(ds.path, index_col=0))
 
 
 def is_cached(ds: DataSet) -> bool:
@@ -39,35 +39,22 @@ def is_cached(ds: DataSet) -> bool:
         return True
 
 
-M = TypeVar('M')
-E = TypeVar('E')
-Effect = Callable[[Model, M], E]
+def updated_data_set(ds: DataSet, force_update: bool = False) -> CompetencesMetiers:
+    state = get_state()
 
+    do_pull = not is_cached(ds) or force_update
 
-def updated_data_set(force_update: bool = False) -> Effect[str, Tuple[DataSet, CompetencesMetiers]]:
-    def effect(state: Model, data_set_name: str)-> Tuple[DataSet, CompetencesMetiers]:
-        ds = state.data_sets[data_set_name]
+    if do_pull:
+        logging.info(f"Data set pull from source requested for {ds.name} .")
+        pull_source(ds)
 
-        do_pull = not is_cached(ds) or force_update
-
-        if do_pull:
-            logging.info(f"Data set pull from source requested for {ds.name} .")
-            pull_source(ds)
-
-        if do_pull or ds not in state.competences_metiers:
-            logging.info(f"Data set update requested for {ds.name} .")
-            df = data_frame(ds)
-            cm = CompetencesMetiers(df=df) # type:ignore
-            return ds, cm
-        else:
-            return ds, state.competences_metiers[ds]
-
-
-    return effect
-
-
-def empty_effect(_: Model, __: Any) -> None:
-    return None
+    if do_pull or ds not in state.competences_metiers:
+        logging.info(f"Data set update requested for {ds.name} .")
+        df = data_frame(ds)
+        cm = CompetencesMetiers(df=df) # type:ignore
+        return cm
+    else:
+        return state.competences_metiers[ds]
 
 
 
