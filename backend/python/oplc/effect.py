@@ -2,9 +2,8 @@ import pandas as pa
 import requests
 from requests.exceptions import HTTPError
 
-from oplc.model import CompetencesMetiers, DataSet, GoogleDocsCsv
+from oplc.model import CompetencesMetiers, DataSet, GoogleDocsCsv, Model
 import logging
-from oplc.state import get_state
 
 
 def pull_source(ds: DataSet) -> None:
@@ -39,22 +38,20 @@ def is_cached(ds: DataSet) -> bool:
         return True
 
 
-def updated_data_set(ds: DataSet, force_update: bool = False) -> CompetencesMetiers:
-    state = get_state()
-
+def updated_data_set(ds: DataSet, model: Model, force_update: bool = False) -> CompetencesMetiers:
     do_pull = not is_cached(ds) or force_update
 
     if do_pull:
         logging.info(f"Data set pull from source requested for {ds.name} .")
         pull_source(ds)
 
-    if do_pull or ds not in state.competences_metiers:
+    if do_pull or ds not in model.competences_metiers:
         logging.info(f"Data set update requested for {ds.name} .")
         df = data_frame(ds)
         cm = CompetencesMetiers(df=df) # type:ignore
         return cm
     else:
-        return state.competences_metiers[ds]
+        return model.competences_metiers[ds]
 
 
 

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from oplc.constants import DEFAULT_DATA_SET
-from oplc.model import DataSet, Metier, Competence
+from oplc.model import DataSet, Metier, Competence, Model
 
 from typing import Callable, TypeVar
 
@@ -33,6 +33,12 @@ class DataSetJson(BaseModel):
     @staticmethod
     def view(ds: DataSet) -> "DataSetJson":
         return DataSetJson(name=ds.name)
+
+    def decode(self, model: Model) -> DataSet:
+        try:
+            return model.data_sets[self.name]
+        except KeyError:
+            raise KeyError(f"Data set {self.name} not found in current model state.")
 
 
 class DataSetsJson(BaseModel):

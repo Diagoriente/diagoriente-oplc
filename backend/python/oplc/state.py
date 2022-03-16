@@ -1,8 +1,8 @@
-from oplc.action import Action
 from oplc.model import Model, LocalCsv, GoogleDocsCsv
 
 from pathlib import Path
 from oplc.constants import LOCAL_DATASETS, GOOGLE_DOCS_DATASETS
+from typing import Any
 
 
 state = Model(
@@ -15,11 +15,20 @@ state = Model(
     )
 )
 
-def get_state():
-    return state
+class State:
+    def __enter__(self) -> Model:
+        global state
+        self.state = state
+        return self.state
 
-def run_action(action: Action) -> Model:
-    global state
-    state = action(state)
-    return state
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> bool:
+        global state
+
+        if (exc_type, exc_value, traceback) == (None, None, None):
+            state = self.state
+            return True
+        else:
+            # If an exception was raised, don't write the modified state back to
+            # the global state.
+            return False
 

@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from oplc.constants import CORS_ALLOWED_ORIGINS, API_ROOT_PATH
+from typing import Optional
 
 from oplc.view import DataSetsJson, DataSetJson, MetiersJson, CompetencesJson
 from oplc.effect import updated_data_set
 from oplc.action import update_data_set
-from oplc.state import get_state, run_action
+from oplc.state import State
 
 # TODO: configure this
 import logging
@@ -22,26 +23,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/data_sets")
-async def get_data_sets() -> DataSetsJson:
-    return DataSetsJson.view(get_state().data_sets)
+async def get_data_sets() -> Optional[DataSetsJson]:
+    with State() as s:
+        return DataSetsJson.view(s.data_sets)
 
 
 @app.post("/metiers")
-async def post_metiers(dataset: DataSetJson) -> MetiersJson:
-    state = get_state()
-    ds = state.data_sets[dataset.name]
-    cm = updated_data_set(ds)
-    run_action(update_data_set(ds, cm))
-    return MetiersJson.view(get_state().competences_metiers[ds].metiers())
+async def post_metiers(dataset: DataSetJson) -> Optional[MetiersJson]:
+    with State() as s:
+        ds = s.data_sets[dataset.name]
+        cm = updated_data_set(ds, s)
+        s = update_data_set(ds, cm, s)
+        metiers = s.competences_metiers[ds].metiers()
+        return MetiersJson.view(metiers)
 
 
 @app.post("/competences")
-async def post_competences(dataset: DataSetJson) -> CompetencesJson:
-    state = get_state()
-    ds = state.data_sets[dataset.name]
-    cm = updated_data_set(ds)
-    run_action(update_data_set(ds, cm))
-    return CompetencesJson.view(get_state().competences_metiers[ds].competences())
-
-
+async def post_competences(dataset: DataSetJson) -> Optional[CompetencesJson]:
+    with State() as s:
+        ds = dataset.decode(s)
+        cm = updated_data_set(ds, s)
+        s = update_data_set(ds, cm, s)
+        competences = s.competences_metiers[ds].competences()
+        return CompetencesJson.view(competences)

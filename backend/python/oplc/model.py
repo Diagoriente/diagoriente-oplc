@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
+from typing import Union, Iterator
 from oplc.constants import DATASET_CACHE_DIR
 import pandas as pa
 
@@ -42,11 +42,11 @@ class CompetencesMetiers:
     df: pa.DataFrame
 
     def metiers(self) -> list[Metier]:
-        ms: list[str] = self.df.index.to_list()
+        ms: Iterator[str] = iter(self.df.index)
         return [Metier(name=m) for m in ms]
 
     def competences(self) -> list[Competence]:
-        cs: list[str] = self.df.columns.to_list()
+        cs: Iterator[str] = iter(self.df.columns)
         return [Competence(name=c) for c in cs]
 
 
