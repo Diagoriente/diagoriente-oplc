@@ -17,7 +17,7 @@ export const CompetenceSelector: React.FC<{
   const [competences] = useFromBackend<OrderedSet<Competence>>("competences",
     {dataset: dataSet},
     [],
-    (r: any) => OrderedSet<Competence>(r.map(Competence)).sort(lessThan));
+    (r: any) => OrderedSet<Competence>(r.map(Competence)));
 
   const [notSelected, setNotSelected] = useState<OrderedSet<Competence> | undefined>(undefined);
 
@@ -26,19 +26,21 @@ export const CompetenceSelector: React.FC<{
   useEffect(() => {
     if(selected === undefined && notSelected === undefined && competences !== undefined) {
       setSelected(OrderedSet([]));
-      setNotSelected(() => OrderedSet(competences).sort(lessThan));
+      setNotSelected(() => competences);
     }
   },
   [competences, selected, notSelected, setSelected, setNotSelected]);
 
   const select = (c: Competence) => {
-    setSelected(selected?.add(c).sort(lessThan));
+    setSelected(selected === undefined ? OrderedSet([c])
+                                       : OrderedSet([c]).union(selected));
     setNotSelected(notSelected?.delete(c));
   };
 
   const deselect = (c: Competence) => {
     setSelected(selected?.delete(c));
-    setNotSelected(notSelected?.add(c).sort(lessThan));
+    setNotSelected(notSelected === undefined ? OrderedSet([c])
+                                             : OrderedSet([c]).union(notSelected));
   };
 
   return (
