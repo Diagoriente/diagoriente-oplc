@@ -12,8 +12,6 @@ import logging
 
 
 
-# If the data cache exists in cache already, avoid pulling the source.
-
 def pull_source(
         ds: DataSource,
         kind: DataPieceKind,
@@ -50,15 +48,17 @@ def pull_source(
                     "name": ds.name,
                   }))
 
+    return load_local_csv(kind)
+
+
+def load_local_csv(kind: DataPieceKind):
     with open(local_csv_path_meta(kind), "r") as f:
         meta = json.loads(f.read())
-        data_local = LocalCsv(
+        return LocalCsv(
                 kind=kind,
                 date=datetime.fromisoformat(meta["date"]),
                 name=meta["name"]
                 )
-
-    return data_local
 
 
 def load_data_frame(ds: LocalCsv) -> pa.DataFrame :
