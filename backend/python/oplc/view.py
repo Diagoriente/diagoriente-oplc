@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 
-from oplc.constants import DEFAULT_DATA_SET
-from oplc.model import DataSet, Metier, Competence, Model, MetiersSuggestion
+from oplc.model import Experience, Job, Skill, JobRecommendation
 
 from typing import Callable, TypeVar
 
@@ -10,74 +9,64 @@ U = TypeVar('U')
 View = Callable[[T], U]
 
 
-class MetierJson(BaseModel, frozen=True):
+class JobJson(BaseModel, frozen=True):
     name: str
 
     @staticmethod
-    def view(m: Metier) -> "MetierJson":
-        return MetierJson(name=m.name)
+    def view(m: Job) -> "JobJson":
+        return JobJson(name=m.name)
 
 
-class CompetenceJson(BaseModel, frozen=True):
+class SkillJson(BaseModel, frozen=True):
     name: str
 
     @staticmethod
-    def view(m: Competence) -> "CompetenceJson":
-        return CompetenceJson(name=m.name)
+    def view(m: Skill) -> "SkillJson":
+        return SkillJson(name=m.name)
 
-    def decode(self) -> Competence:
-        return Competence(name=self.name)
+    def decode(self) -> Skill:
+        return Skill(name=self.name)
 
 
-
-class DataSetJson(BaseModel):
+class ExperienceJson(BaseModel, frozen=True):
     name: str
+    exp_type: str
 
     @staticmethod
-    def view(ds: DataSet) -> "DataSetJson":
-        return DataSetJson(name=ds.name)
+    def view(m: Experience) -> "ExperienceJson":
+        return ExperienceJson(name=m.name, exp_type=m.exp_type)
 
-    def decode(self, model: Model) -> DataSet:
-        try:
-            return model.data_sets[self.name]
-        except KeyError:
-            raise KeyError(f"Data set {self.name} not found in current model state.")
+    def decode(self) -> Experience:
+        return Experience(name=self.name, exp_type=self.exp_type)
 
 
-class DataSetsJson(BaseModel):
-    default: str
-    datasets: list[str]
-
-    @staticmethod
-    def view(dss: dict[str, DataSet]) -> "DataSetsJson":
-        return DataSetsJson(default=DEFAULT_DATA_SET,
-                            datasets=[ds.name for ds in dss.values()])
+def view_jobs_json(jobs: list[Job]) -> list[JobJson]:
+    return [JobJson.view(m) for m in jobs]
 
 
-
-def view_metiers_json(metiers: list[Metier]) -> list[MetierJson]:
-    return [MetierJson.view(m) for m in metiers]
-
-
-def view_competences_json(competences: list[Competence]) -> list[CompetenceJson]:
-    return [CompetenceJson.view(c) for c in competences]
+def view_skills_json(skills: list[Skill]) -> list[SkillJson]:
+    return [SkillJson.view(c) for c in skills]
 
 
-def decode_competences_json(competences: list[CompetenceJson]) -> list[Competence]:
-    return [c.decode() for c in competences]
+def view_experiences_json(experiences: list[Experience]) -> list[ExperienceJson]:
+    return [ExperienceJson.view(c) for c in experiences]
 
 
-class MetierWithScoreJson(BaseModel):
-    metier: MetierJson
+def decode_experiences_json(experiences: list[ExperienceJson]) -> list[Experience]:
+    return [x.decode() for x in experiences]
+
+
+class JobWithScoreJson(BaseModel):
+    job: JobJson
     score: float
 
 
-class MetiersSuggestionJson(BaseModel):
-    scores: list[MetierWithScoreJson]
+class JobRecommendationJson(BaseModel):
+    scores: list[JobWithScoreJson]
 
     @staticmethod
-    def view(metiers_suggestion: MetiersSuggestion) -> "MetiersSuggestionJson":
+    def view(job_recommendation: JobRecommendation) -> "JobRecommendationJson":
         scores = [
-            MetierWithScoreJson(metier=MetierJson.view(m), score=s)
-            for m, s in metiers_suggestion.items()]
-        return MetiersSuggestionJson(scores=scores)
+            JobWithScoreJson(job=JobJson.view(m), score=s)
+            for m, s in job_recommendation.items()]
+        return JobRecommendationJson(scores=scores)

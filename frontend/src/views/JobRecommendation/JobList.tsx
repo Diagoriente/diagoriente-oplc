@@ -1,28 +1,22 @@
 import React from 'react';
 import useFromBackend from 'hooks/useFromBackend';
 import Box from 'components/Box';
-import {Competence} from 'utils/helpers/Competences';
-import {MetierSuggestion} from 'utils/helpers/Metiers';
+import {Experience} from 'utils/helpers/Experiences';
+import {JobRecommendation} from 'utils/helpers/Jobs';
 import {OrderedSet} from 'immutable';
-import {DataSet} from 'utils/helpers/DataSets';
 
-export const ListeMetiers: React.FC<{
-    dataSet: DataSet, 
-    competences: OrderedSet<Competence> | undefined
+export const JobList: React.FC<{
+    experiences: OrderedSet<Experience> | undefined
     }> = ({
-    dataSet,
-    competences
+    experiences
     }) => {
-  const [metiersSuggestion] = useFromBackend<OrderedSet<MetierSuggestion>>(
-    "metiers_suggestion",
+  const [jobsRecommendation] = useFromBackend<JobRecommendation[]>(
+    "jobs_recommendation",
     {
-      dataset: dataSet,
-      competences: competences
+      experiences: experiences
     },
-    [dataSet, competences],
-    (r: any) => (
-      OrderedSet<MetierSuggestion>(r.scores.map(MetierSuggestion))
-    )
+    [experiences],
+    (r: any) => r.scores.map(JobRecommendation),
   )
 
   return (
@@ -39,10 +33,10 @@ export const ListeMetiers: React.FC<{
         </thead>
         <tbody className="table-header-group ">
           {
-            metiersSuggestion?.map((m) =>
-              <tr key={m.metier.name} className="table-row">
+            jobsRecommendation?.map((m) =>
+              <tr key={m.job.name} className="table-row">
                 <td className="px-2 table-cell text-right">{m.score}</td>
-                <td className="px-2 table-cell">{m.metier.name}</td>
+                <td className="px-2 table-cell">{m.job.name}</td>
               </tr>)
           }
         </tbody>
@@ -51,4 +45,4 @@ export const ListeMetiers: React.FC<{
   );
 }
 
-export default ListeMetiers;
+export default JobList;

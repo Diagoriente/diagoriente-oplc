@@ -2,42 +2,39 @@ import React, {useState, useEffect} from 'react';
 import useFromBackend from 'hooks/useFromBackend';
 import Box from 'components/Box';
 import {OrderedSet} from 'immutable';
-import {Competence, lessThan} from 'utils/helpers/Competences';
-import {DataSet} from 'utils/helpers/DataSets';
+import {Experience} from 'utils/helpers/Experiences';
 
-export const CompetenceSelector: React.FC<{
-    dataSet: DataSet,
-    selected: OrderedSet<Competence> | undefined,
-    setSelected: (competences: OrderedSet<Competence> | undefined) => void
+export const ExperienceSelector: React.FC<{
+    selected: OrderedSet<Experience> | undefined,
+    setSelected: (experiences: OrderedSet<Experience> | undefined) => void
     }> = ({
-    dataSet,
     selected,
     setSelected
     }) => {
-  const [competences] = useFromBackend<OrderedSet<Competence>>("competences",
-    {dataset: dataSet},
+  const [experiences] = useFromBackend<OrderedSet<Experience>>("experiences",
+    {},
     [],
-    (r: any) => OrderedSet<Competence>(r.map(Competence)));
+    (r: any) => OrderedSet<Experience>(r.map(Experience)));
 
-  const [notSelected, setNotSelected] = useState<OrderedSet<Competence> | undefined>(undefined);
+  const [notSelected, setNotSelected] = useState<OrderedSet<Experience> | undefined>(undefined);
 
   const [filter, setFilter] = useState<string>("");
 
   useEffect(() => {
-    if(selected === undefined && notSelected === undefined && competences !== undefined) {
+    if(selected === undefined && notSelected === undefined && experiences !== undefined) {
       setSelected(OrderedSet([]));
-      setNotSelected(() => competences);
+      setNotSelected(() => experiences);
     }
   },
-  [competences, selected, notSelected, setSelected, setNotSelected]);
+  [experiences, selected, notSelected, setSelected, setNotSelected]);
 
-  const select = (c: Competence) => {
+  const select = (c: Experience) => {
     setSelected(selected === undefined ? OrderedSet([c])
                                        : OrderedSet([c]).union(selected));
     setNotSelected(notSelected?.delete(c));
   };
 
-  const deselect = (c: Competence) => {
+  const deselect = (c: Experience) => {
     setSelected(selected?.delete(c));
     setNotSelected(notSelected === undefined ? OrderedSet([c])
                                              : OrderedSet([c]).union(notSelected));
@@ -49,21 +46,21 @@ export const CompetenceSelector: React.FC<{
 
         <label 
           className="font-bold underline text-center" 
-          htmlFor="competences-search">
+          htmlFor="experiences-search">
           Sélectionnez des compétences :
         </label>
 
         <input className="border rounded px-1" type="text" 
-          id="competences-search" name="competences-search"
+          id="experiences-search" name="experiences-search"
           placeholder="Tapez ici pour filtrer les compétences"
           onChange={e => setFilter(e.currentTarget.value)}/>
 
         <div className="divide-y-2">
           <div>
             { 
-              selected?.filter((c: Competence) => ~c.name.indexOf(filter))
-                .map((c: Competence) => 
-                  <div className="flex flex-row space-x-1" key={c.name}>
+              selected?.filter((c: Experience) => ~c.name.indexOf(filter))
+                .map((c: Experience) => 
+                  <div className="flex flex-row space-x-1" key={c.name + c.exp_type}>
                     <input type="checkbox" id={"checkbox-competence-" + c.name} 
                       value={c.name}
                       onChange={() => deselect(c)}
@@ -75,9 +72,9 @@ export const CompetenceSelector: React.FC<{
 
           <div>
             {
-              notSelected?.filter((c: Competence) => ~c.name.indexOf(filter))
-                .map((c: Competence) =>
-                  <div className="flex flex-row space-x-1" key={c.name}>
+              notSelected?.filter((c: Experience) => ~c.name.indexOf(filter))
+                .map((c: Experience) =>
+                  <div className="flex flex-row space-x-1" key={c.name + c.exp_type}>
                     <input type="checkbox" id={"checkbox-competence-" + c.name}
                       value={c.name}
                       onChange={() => select(c)}/>
@@ -91,5 +88,5 @@ export const CompetenceSelector: React.FC<{
   );
 };
 
-export default CompetenceSelector;
+export default ExperienceSelector;
 
