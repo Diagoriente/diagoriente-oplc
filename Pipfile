@@ -1,0 +1,24 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+lenses = "*"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+pydantic = "*"
+requests = "*"
+
+[dev-packages]
+mypy = "*"
+ipython = "*"
+autopep8 = "*"
+pytest = "*"
+pyright = "*"
+
+[requires]
+python_version = "3.9"

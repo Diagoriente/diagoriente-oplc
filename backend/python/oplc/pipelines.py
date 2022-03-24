@@ -8,7 +8,7 @@ from oplc.config import (
         DATASET_CACHE_DIR, EXPERIENCES_SKILLS_DATA_SOURCES,
         JOBS_SKILLS_DATA_SOURCES,
         )
-from oplc.model import DataSet
+from oplc.model import ExperiencesSkills, JobsSkills
 
 # There are two kinds of data pieces: the experiences_skills map and
 # jobs_skills map.
@@ -93,26 +93,30 @@ jobs_skills_data_source = data_source_from_def(
 
 # The data must conform to some prerequisites
 
-def check_data(ds: DataSet) -> None:
+def check_data(experiences_skills: ExperiencesSkills, jobs_skills: JobsSkills) -> None:
 
     # Experiences, jobs and skills must all be unique in the data sets
 
     T = TypeVar("T")
     def duplicate_values(values: list[T]) -> list[Tuple[T,int]]:
         counts = pa.Series(values).value_counts()
-        counts = counts.loc[counts > 1]
-        return list(counts.items())
+        res = counts.loc[counts > 1].to_list()
+        return res
 
-    dup = duplicate_values(ds.experiences_skills.df.index.to_list())
+    experiences: list[str] = experiences_skills.df.index.to_list()
+    dup = duplicate_values(experiences)
     assert len(dup) == 0, f"Found duplicated experiences in experiences_skills matrix: {dup}"
 
-    dup = duplicate_values(ds.experiences_skills.df.columns.to_list())
+    skills: list[str] = experiences_skills.df.columns.to_list()
+    dup = duplicate_values(skills)
     assert len(dup) == 0, f"Found duplicated skills in experiences_skills matrix: {dup}"
 
-    dup = duplicate_values(ds.jobs_skills.df.index.to_list())
+    jobs: list[str] = jobs_skills.df.index.to_list()
+    dup = duplicate_values(jobs)
     assert len(dup) == 0, f"Found duplicated jobs in jobs_skills matrix: {dup}"
 
-    dup = duplicate_values(ds.jobs_skills.df.columns.to_list())
+    skills: list[str] = jobs_skills.df.columns.to_list()
+    dup = duplicate_values(skills)
     assert len(dup) == 0, f"Found duplicated skills in jobs_skills matrix: {dup}"
 
 

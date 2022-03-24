@@ -4,8 +4,9 @@
         "**/__pycache__"
     ],
     "typeCheckingMode": "strict",
-    "extraPaths": ["backend/python/", "backend/python/.venv/lib/python3.9/site-packages/"],
-    "venvPath": "backend/python/.venv",
+    "extraPaths": ["backend/python/", ".venv/lib/python3.9/site-packages/"],
+    "venv": "Dev-C2mY5UOt",
+    "venvPath": ".venv",
     "useLibraryCodeForTypes": false,
     "reportUnknownVariableType": false,
     "reportUnknownMemberType": false,

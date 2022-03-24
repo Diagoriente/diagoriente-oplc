@@ -110,7 +110,8 @@ def skills_from_experiences(
     index = [(x.name, x.exp_type) for x in experiences]
     scores: pa.Series = experiences_skills.df.loc[index, :].sum(axis=0)
     scores = scores.loc[scores > 0]
-    return set(Skill(name=n) for n in scores.index)
+    scores_names: Iterable[str] = iter(scores.index)
+    return set(Skill(name=n) for n in scores_names)
 
 
 # At the second step, we compute similarly the jobs scores by counting the
@@ -125,25 +126,4 @@ def jobs_from_skills(
     index = [c.name for c in skills]
     scores: pa.Series = jobs_skills.df.loc[:, index].sum(axis=1)
     scores = scores.loc[scores > 0].sort_values(ascending=False)
-    breakpoint()
     return JobRecommendation(scores=scores)
-
-
-# The two maps introduced above constitute together a dataset. A data set is
-# given a unique id to differenciate data versions.
-
-@dataclass(frozen=True)
-class DataSet:
-    experiences_skills: "ExperiencesSkills"
-    jobs_skills: "JobsSkills"
-
-
-def mk_data_set(
-        experiences_skills: pa.DataFrame,
-        jobs_skills: pa.DataFrame
-        ) -> DataSet:
-    return DataSet(
-            experiences_skills=mk_experiences_skills(experiences_skills),
-            jobs_skills=mk_jobs_skills(jobs_skills),
-            )
-
