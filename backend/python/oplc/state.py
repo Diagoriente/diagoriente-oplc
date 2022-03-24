@@ -44,32 +44,24 @@ def state():
     app_state = s
 
 
-# At startup, the application pulls the data pieces from their respective
-# sources.
+def init() -> State:
+    experiences_skills_local_csv = pull_source(experiences_skills_data_source, "experiences_skills")
+    jobs_skills_local_csv = pull_source(jobs_skills_data_source, "jobs_skills")
 
-experiences_skills_local_csv = pull_source(experiences_skills_data_source, "experiences_skills")
-jobs_skills_local_csv = pull_source(jobs_skills_data_source, "jobs_skills")
+    # It then loads the data frames from the resulting local csvs
 
-# It then loads the data frames from the resulting local csvs
+    experiences_skills_df = load_data_frame(experiences_skills_local_csv)
+    jobs_skills_df = load_data_frame(jobs_skills_local_csv)
 
-experiences_skills_df = load_data_frame(experiences_skills_local_csv)
-jobs_skills_df = load_data_frame(jobs_skills_local_csv)
+    dataset = mk_data_set(
+            experiences_skills=experiences_skills_df,
+            jobs_skills=jobs_skills_df,
+            )
 
-dataset = mk_data_set(
-        experiences_skills=experiences_skills_df,
-        jobs_skills=jobs_skills_df,
-        )
+    # Some basic checks ensure that the data is valid
+    check_data(dataset)
 
-# Some basic checks ensure that the data is valid
-check_data(dataset)
+    return State(dataset=dataset)
 
-# A global state stores all the data that will be needed at runtime beyond
-# initialization. This is the global state that must be used within a with
-# statement anywhere else to handle side effects cleanly. For example:
-#
-# from oplc.state import state
-# with state as s:
-#    s.dataset = ...
 
-app_state = State(dataset=dataset)
-
+app_state = init()
