@@ -15,7 +15,6 @@ import pandas as pa
 from typing import Union
 
 import logging
-logging.debug("Entering oplc.action")
 
 @dataclass
 class NoAction:

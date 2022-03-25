@@ -11,6 +11,9 @@ class ExperienceJson(BaseModel):
     name: str
     exp_type: str
 
+    def decode(self) -> core.Experience:
+        return core.Experience(name=self.name, exp_type=self.exp_type)
+
 
 def experiences_json(model: Model) -> list[ExperienceJson]:
     return [

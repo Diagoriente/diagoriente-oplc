@@ -52,5 +52,5 @@ async def post_job_recommendation(
         ) -> Optional[view.JobRecommendationJson]:
     return view.job_recommendation_json(
             model.get(),
-            experiences,
+            [e.decode() for e in experiences],
             )

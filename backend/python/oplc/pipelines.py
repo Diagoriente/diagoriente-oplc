@@ -166,6 +166,8 @@ def pull_source(
                     "date": datetime.utcnow().isoformat(),
                     "name": ds.name,
                   }))
+    else:
+        logging.info(f'Using local csv in "{local_csv_dir(kind)}"')
 
     return load_local_csv(kind)
 
