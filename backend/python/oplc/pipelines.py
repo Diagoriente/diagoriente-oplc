@@ -24,7 +24,7 @@ DataPieceKind = Literal["experiences_skills", "jobs_skills"]
 # Each piece of data is stored locally as a csv file. Different versions are
 # stored with different filenames.
 
-@dataclass(frozen=True)
+@dataclass
 class LocalCsv:
     kind: DataPieceKind
     date: datetime
@@ -44,7 +44,7 @@ def local_csv_path_meta(kind: DataPieceKind) -> Path:
 
 DataSource = Union["LocalSourceCsv", "GoogleDocsCsv"]
 
-@dataclass(frozen=True)
+@dataclass
 class LocalSourceCsv:
     name: str
     path: Path
@@ -54,7 +54,7 @@ class LocalSourceCsv:
 # https://docs.google.com/spreadsheets/d/1PCLOHAE0yXt_tghVlV44ZTt7ZzEUV-f3COrKEMbLamc/edit?pli=1#gid=0
 # The key is 1PCLOHAE0yXt_tghVlV44ZTt7ZzEUV-f3COrKEMbLamc and the gid is 0.
 
-@dataclass(frozen=True)
+@dataclass
 class GoogleDocsCsv:
     name: str
     key: str
@@ -140,6 +140,7 @@ def pull_source(
         logging.info(f'Pulling data source "{ds.name}"')
 
         if isinstance(ds, GoogleDocsCsv):
+            # TODO: switch to an asynchronous HTTP request (httpx, aiohttp)
             res = requests.get(ds.url())
             res.encoding = "utf-8"
 

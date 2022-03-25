@@ -1,3 +1,6 @@
+"""Logic in pure functions.
+"""
+
 from dataclasses import dataclass
 from typing import Iterable, Iterator, Tuple
 import pandas as pa
@@ -35,6 +38,7 @@ def job_recommendation(
     jobs = jobs_from_skills(jobs_skills, skills)
     return jobs
 
+
 @dataclass(frozen=True)
 class JobRecommendation:
     scores: pa.Series
@@ -51,14 +55,6 @@ class JobRecommendation:
 class JobsSkills:
     df: pa.DataFrame
 
-    def jobs(self) -> list[Job]:
-        ms: Iterator[str] = iter(self.df.index)
-        return [Job(name=m) for m in ms]
-
-    def skills(self) -> list[Skill]:
-        cs: Iterator[str] = iter(self.df.columns)
-        return [Skill(name=c) for c in cs]
-
 
 def mk_jobs_skills(df: pa.DataFrame) -> JobsSkills:
     try:
@@ -72,17 +68,19 @@ def mk_jobs_skills(df: pa.DataFrame) -> JobsSkills:
         return JobsSkills(df=js)
 
 
+def jobs(js: JobsSkills) -> list[Job]:
+    ms: Iterator[str] = iter(js.df.index)
+    return [Job(name=m) for m in ms]
+
+
+def skills(js: JobsSkills) -> list[Skill]:
+    cs: Iterator[str] = iter(js.df.columns)
+    return [Skill(name=c) for c in cs]
+
+
 @dataclass(frozen=True)
 class ExperiencesSkills:
     df: pa.DataFrame
-
-    def experiences(self) -> list[Experience]:
-        ms: Iterator[Tuple[str, str]] = iter(self.df.index)
-        return [Experience(name=m, exp_type=t) for m, t in ms]
-
-    def skills(self) -> list[Skill]:
-        cs: Iterator[str] = iter(self.df.columns)
-        return [Skill(name=c) for c in cs]
 
 
 def mk_experiences_skills(df: pa.DataFrame) -> ExperiencesSkills:
@@ -95,6 +93,11 @@ def mk_experiences_skills(df: pa.DataFrame) -> ExperiencesSkills:
         raise ValueError("Expecting more columns in the experiences_skills data frame.")
     else:
         return ExperiencesSkills(df=es)
+
+
+def experiences(es: ExperiencesSkills) -> list[Experience]:
+    ms: Iterator[Tuple[str, str]] = iter(es.df.index)
+    return [Experience(name=m, exp_type=t) for m, t in ms]
 
 
 

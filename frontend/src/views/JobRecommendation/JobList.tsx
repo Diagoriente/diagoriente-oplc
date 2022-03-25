@@ -11,7 +11,7 @@ export const JobList: React.FC<{
     experiences
     }) => {
   const [jobsRecommendation] = useFromBackend<JobRecommendation[]>(
-    "jobs_recommendation",
+    "job_recommendation",
     {
       experiences: experiences
     },

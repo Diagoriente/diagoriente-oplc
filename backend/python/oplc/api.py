@@ -1,17 +1,20 @@
+"""HTTP API.
+
+The functions define endpoints. They put together the pieces from oplc.model,
+oplc.view and oplc.actions in the lines of
+https://www.infoq.com/articles/no-more-mvc-frameworks/.
+"""
+
 import logging
 from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from oplc.config import API_ROOT_PATH, CORS_ALLOWED_ORIGINS
-from oplc.model import model
-from oplc.view import (
-        decode_experiences_json, JobRecommendationJson, view_jobs_json,
-        view_skills_json, JobJson, SkillJson, ExperienceJson,
-        view_experiences_json, view_job_recommendation_json
-        )
+from oplc import model, action, view
 
 logging.getLogger().setLevel(logging.INFO)
+
 
 app = FastAPI(root_path=API_ROOT_PATH)
 
@@ -24,24 +27,30 @@ app.add_middleware(
 )
 
 @app.get("/experiences")
-async def get_experiences() -> Optional[list[ExperienceJson]]:
-    return view_experiences_json(model)
+async def get_experiences() -> Optional[list[view.ExperienceJson]]:
+    return view.experiences_json(model.get())
 
 
 @app.get("/jobs")
-async def get_jobs() -> Optional[list[JobJson]]:
-    return view_jobs_json(model)
+async def get_jobs() -> Optional[list[view.JobJson]]:
+    return view.jobs_json(model.get())
 
 
 @app.get("/skills")
-async def get_skills() -> Optional[list[SkillJson]]:
-    return view_skills_json(model)
+async def get_skills() -> Optional[list[view.SkillJson]]:
+    return view.skills_json(model.get())
 
 
-@app.post("/jobs_recommendation")
-async def post_jobs_recommendation(
-        experiences: list[ExperienceJson],
-        ) -> Optional[JobRecommendationJson]:
-    return view_job_recommendation_json(
-            model, 
-            decode_experiences_json(experiences))
+@app.post("/pull_data_source")
+async def post_pull_data_source() -> None:
+    model.present(action.pull_data_source())
+
+
+@app.post("/job_recommendation")
+async def post_job_recommendation(
+        experiences: list[view.ExperienceJson],
+        ) -> Optional[view.JobRecommendationJson]:
+    return view.job_recommendation_json(
+            model.get(),
+            experiences,
+            )

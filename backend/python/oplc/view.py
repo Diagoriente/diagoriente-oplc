@@ -1,81 +1,66 @@
+"""Views, transform core data types for presentation
+"""
+
 from pydantic import BaseModel
 
-from oplc.core import Experience, Job, Skill, job_recommendation
+from oplc import core
 from oplc.model import Model
 
-from typing import Callable, TypeVar
 
-T = TypeVar('T')
-U = TypeVar('U')
-View = Callable[[T], U]
-
-
-class JobJson(BaseModel, frozen=True):
-    name: str
-
-def view_job_json(m: Job) -> JobJson:
-    return JobJson(name=m.name)
-
-
-def view_jobs_json(model: Model) -> list[JobJson]:
-    jobs = model.jobs_skills.jobs()
-    return [view_job_json(m) for m in jobs]
-
-
-class SkillJson(BaseModel, frozen=True):
-    name: str
-
-def view_skill_json(m: Skill) -> SkillJson:
-    return SkillJson(name=m.name)
-
-def decode_skill_json(j: SkillJson) -> Skill:
-    return Skill(name=j.name)
-
-
-class ExperienceJson(BaseModel, frozen=True):
+class ExperienceJson(BaseModel):
     name: str
     exp_type: str
 
-def view_experience_json(m: Experience) -> ExperienceJson:
-    return ExperienceJson(name=m.name, exp_type=m.exp_type)
 
-def decode_experience_json(j: ExperienceJson) -> Experience:
-    return Experience(name=j.name, exp_type=j.exp_type)
-
-
-def view_skills_json(model: Model) -> list[SkillJson]:
-    skills = model.experiences_skills.skills()
-    return [view_skill_json(c) for c in skills]
+def experiences_json(model: Model) -> list[ExperienceJson]:
+    return [
+            ExperienceJson(name=e.name, exp_type=e.exp_type)
+            for e in core.experiences(model.experiences_skills)
+            ]
 
 
-def view_experiences_json(model: Model) -> list[ExperienceJson]:
-    experiences = model.experiences_skills.experiences()
-    return [view_experience_json(c) for c in experiences]
+class SkillJson(BaseModel):
+    name: str
 
-def decode_experiences_json(experiences: list[ExperienceJson]) -> list[Experience]:
-    return [decode_experience_json(x) for x in experiences]
 
+def skills_json(model: Model) -> list[SkillJson]:
+    return [
+            SkillJson(name=s.name)
+            for s in core.skills(model.jobs_skills)
+            ]
+
+
+class JobJson(BaseModel):
+    name: str
+
+
+def jobs_json(model: Model) -> list[JobJson]:
+    return [
+            JobJson(name=j.name)
+            for j in core.jobs(model.jobs_skills)
+            ]
 
 
 class JobWithScoreJson(BaseModel):
-    job: JobJson
+    job: core.Job
     score: float
 
 
 class JobRecommendationJson(BaseModel):
     scores: list[JobWithScoreJson]
 
-def view_job_recommendation_json(
+
+def job_recommendation_json(
         model: Model,
-        experiences: list[Experience],
+        experiences: list[core.Experience],
         ) -> JobRecommendationJson:
-    jr = job_recommendation(
-            model.experiences_skills,
-            model.jobs_skills,
-            experiences,
-            )
+    jr = core.job_recommendation(
+                model.experiences_skills,
+                model.jobs_skills,
+                experiences,
+                )
     scores = [
-        JobWithScoreJson(job=view_job_json(m), score=s)
+        JobWithScoreJson(job=m, score=s)
         for m, s in jr.items()
         ]
     return JobRecommendationJson(scores=scores)
