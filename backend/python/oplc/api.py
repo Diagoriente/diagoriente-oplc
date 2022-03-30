@@ -27,17 +27,17 @@ app.add_middleware(
 )
 
 @app.get("/experiences")
-async def get_experiences() -> Optional[list[view.ExperienceJson]]:
+async def get_experiences() -> Optional[dict[view.ExperienceId, view.ExperienceJson]]:
     return view.experiences_json(model.get())
 
 
 @app.get("/jobs")
-async def get_jobs() -> Optional[list[view.JobJson]]:
+async def get_jobs() -> Optional[dict[view.ExperienceId, view.JobJson]]:
     return view.jobs_json(model.get())
 
 
 @app.get("/skills")
-async def get_skills() -> Optional[list[view.SkillJson]]:
+async def get_skills() -> Optional[dict[view.SkillId, view.SkillJson]]:
     return view.skills_json(model.get())
 
 
@@ -48,9 +48,11 @@ async def post_pull_data_source() -> None:
 
 @app.post("/job_recommendation")
 async def post_job_recommendation(
-        experiences: list[view.ExperienceJson],
+        experiences: list[view.ExperienceId],
+        return_graph: bool = False,
         ) -> Optional[view.JobRecommendationJson]:
     return view.job_recommendation_json(
             model.get(),
-            [e.decode() for e in experiences],
+            experiences,
+            return_graph,
             )

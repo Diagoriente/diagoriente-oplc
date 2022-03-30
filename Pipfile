@@ -12,6 +12,8 @@ pandas = "*"
 matplotlib = "*"
 pydantic = "*"
 requests = "*"
+networkx = "*"
+scipy = "*"
 
 [dev-packages]
 mypy = "*"

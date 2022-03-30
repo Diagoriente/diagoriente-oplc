@@ -35,7 +35,12 @@ export const JobList: React.FC<{
           {
             jobsRecommendation?.map((m) =>
               <tr key={m.job.name} className="table-row">
-                <td className="px-2 table-cell text-right">{m.score}</td>
+                <td className="px-2 table-cell text-right">{
+                  m.score.toLocaleString(undefined, {
+                      minimumFractionDigits: 3,
+                      maximumFractionDigits: 3,
+                  })
+                }</td>
                 <td className="px-2 table-cell">{m.job.name}</td>
               </tr>)
           }

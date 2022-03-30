@@ -5,67 +5,87 @@ from pydantic import BaseModel
 
 from oplc import core
 from oplc.model import Model
+import numpy as np
+from oplc.core import ExperienceId, SkillId, JobId
+
+from typing import Tuple, Optional
 
 
 class ExperienceJson(BaseModel):
     name: str
     exp_type: str
 
-    def decode(self) -> core.Experience:
-        return core.Experience(name=self.name, exp_type=self.exp_type)
+
+def experiences_json(model: Model) -> dict[ExperienceId, ExperienceJson]:
+    return {i: ExperienceJson(name=e.name, exp_type=e.exp_type)
+            for i, e in model.experiences.items()
+            }
 
 
-def experiences_json(model: Model) -> list[ExperienceJson]:
-    return [
-            ExperienceJson(name=e.name, exp_type=e.exp_type)
-            for e in core.experiences(model.experiences_skills)
-            ]
-
-
-class SkillJson(BaseModel):
+class SkillJson(BaseModel, frozen=True):
     name: str
 
 
-def skills_json(model: Model) -> list[SkillJson]:
-    return [
-            SkillJson(name=s.name)
-            for s in core.skills(model.jobs_skills)
-            ]
+def skill_json(skill: core.Skill) -> SkillJson:
+    return SkillJson(name=skill.name)
+
+def skills_json(model: Model) -> dict[SkillId, SkillJson]:
+    return {i: SkillJson(name=s.name)
+            for i, s in model.jobs.items()
+            }
 
 
 class JobJson(BaseModel):
     name: str
 
 
-def jobs_json(model: Model) -> list[JobJson]:
-    return [
-            JobJson(name=j.name)
-            for j in core.jobs(model.jobs_skills)
-            ]
+def jobs_json(model: Model) -> dict[JobId, JobJson]:
+    return {i:JobJson(name=j.name)
+            for i, j in model.jobs.items()
+            }
 
+class SkillGraphJson(BaseModel):
+    edges: list[Tuple[SkillJson, SkillJson]]
+    layout: list[Tuple[SkillJson, Tuple[np.float64, np.float64]]]
+
+def skill_graph_json(
+        graph: core.SkillGraph,
+        ) -> SkillGraphJson:
+    return SkillGraphJson(
+            edges=[(u, v) for u, v in graph.graph.edges], # type:ignore
+            layout=[(s, (x, y)) for s, [x, y] in graph.layout.items()],
+            )
 
 class JobWithScoreJson(BaseModel):
-    job: core.Job
+    job: JobId
     score: float
-
 
 class JobRecommendationJson(BaseModel):
     scores: list[JobWithScoreJson]
+    graph: Optional[SkillGraphJson]
 
 
 def job_recommendation_json(
         model: Model,
-        experiences: list[core.Experience],
+        experiences: list[ExperienceId],
+        return_graph: bool,
         ) -> JobRecommendationJson:
     jr = core.job_recommendation(
                 model.experiences_skills,
                 model.jobs_skills,
                 experiences,
+                return_graph=return_graph,
                 )
     scores = [
-        JobWithScoreJson(job=m, score=s)
-        for m, s in jr.items()
+        JobWithScoreJson(job=j, score=s)
+        for j, s in jr.items()
         ]
-    return JobRecommendationJson(scores=scores)
+
+    if jr.skill_graph is not None:
+        graph = skill_graph_json(jr.skill_graph)
+    else:
+        graph = None
+
+    return JobRecommendationJson(scores=scores, graph=graph)
 
 

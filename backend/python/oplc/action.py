@@ -14,8 +14,6 @@ from oplc.pipelines import (
 import pandas as pa
 from typing import Union
 
-import logging
-
 @dataclass
 class NoAction:
     pass

@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from lenses import lens
 from oplc import core
 from oplc.pipelines import (
-    check_data,
     experiences_skills_data_source,
     jobs_skills_data_source,
     pull_source,
@@ -23,25 +22,65 @@ import oplc.action as act
 class Model:
     experiences_skills: core.ExperiencesSkills
     jobs_skills: core.JobsSkills
+    jobs: dict[core.JobId, core.Job]
+    skills: dict[core.SkillId, core.Skill]
+    experiences: dict[core.ExperienceId, core.Experience]
 
 
 def init() -> Model:
-    m = Model(
-        experiences_skills=core.mk_experiences_skills(
-            load_data_frame(pull_source(
+    experiences_skills_df = load_data_frame(pull_source(
                 experiences_skills_data_source,
                 "experiences_skills"
                 ))
-            ),
-        jobs_skills=core.mk_jobs_skills(
-            load_data_frame(pull_source(
+    jobs_skills_df = load_data_frame(pull_source(
                 jobs_skills_data_source,
                 "jobs_skills"
                 ))
-            )
-        )
 
-    check_data(m.experiences_skills, m.jobs_skills)
+    # TODO
+    # check_data(experiences_skills_df, jobs_skills_df)
+
+    job_ids = list(range(len(jobs_skills_df)))
+    skill_ids = list(range(jobs_skills_df.shape[1]))
+    experience_ids = list(range(len(experiences_skills_df)))
+
+    jobs = {i: core.Job(id=i, name=j) # type:ignore
+            for i, j in zip(job_ids, jobs_skills_df.loc[:, "Métier"])} # type:ignore
+    skills = {i: core.Skill(id=i, name=s)
+              for i, s in zip(skill_ids, jobs_skills_df.drop(columns=["Métier"]).columns)}
+    experiences = {
+            i: core.Experience(
+                id=i,
+                name=exp, #type:ignore
+                exp_type=exp_type) #type:ignore
+            for i, (exp, exp_type) in zip(
+                experience_ids,
+                experiences_skills_df.loc[:, ["Expérience", "type"]].values # type:ignore
+                )
+            }
+
+    experiences_skills_mat = (experiences_skills_df
+                              .drop(columns=["Expérience", "type"])
+                              .rename(columns={x.name: i for i, x in experiences.items()})
+                              )
+
+    if experiences_skills_mat is None:
+        raise ValueError("Expecting more columns in the experiences_skills data frame.")
+
+    jobs_skills_mat = (jobs_skills_df
+                       .drop(columns=["Métier"])
+                       .rename(columns={j.name: i for i, j in jobs.items()}))
+
+    if jobs_skills_mat is None:
+        raise ValueError("Expecting more columns in the jobs_skills data frame.")
+
+    m = Model(
+        experiences_skills=core.mk_experiences_skills(experiences_skills_mat),
+        jobs_skills=core.mk_jobs_skills(jobs_skills_mat),
+        jobs=jobs,
+        skills=skills,
+        experiences=experiences,
+        )
 
     return m
 

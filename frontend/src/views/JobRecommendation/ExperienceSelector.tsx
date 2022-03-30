@@ -47,12 +47,12 @@ export const ExperienceSelector: React.FC<{
         <label 
           className="font-bold underline text-center" 
           htmlFor="experiences-search">
-          Sélectionnez des compétences :
+          Sélectionnez des expériences :
         </label>
 
         <input className="border rounded px-1" type="text" 
           id="experiences-search" name="experiences-search"
-          placeholder="Tapez ici pour filtrer les compétences"
+          placeholder="Tapez ici pour filtrer les expériences"
           onChange={e => setFilter(e.currentTarget.value)}/>
 
         <div className="divide-y-2">
@@ -61,11 +61,11 @@ export const ExperienceSelector: React.FC<{
               selected?.filter((c: Experience) => ~c.name.indexOf(filter))
                 .map((c: Experience) => 
                   <div className="flex flex-row space-x-1" key={c.name + c.exp_type}>
-                    <input type="checkbox" id={"checkbox-competence-" + c.name} 
+                    <input type="checkbox" id={"checkbox-experience-" + c.name} 
                       value={c.name}
                       onChange={() => deselect(c)}
                       checked/>
-                    <label htmlFor={"checkbox-competence-" + c.name}>{c.name}</label>
+                    <label htmlFor={"checkbox-experience-" + c.name}>{c.name}</label>
                   </div>) 
             }
           </div>
@@ -75,10 +75,10 @@ export const ExperienceSelector: React.FC<{
               notSelected?.filter((c: Experience) => ~c.name.indexOf(filter))
                 .map((c: Experience) =>
                   <div className="flex flex-row space-x-1" key={c.name + c.exp_type}>
-                    <input type="checkbox" id={"checkbox-competence-" + c.name}
+                    <input type="checkbox" id={"checkbox-experience-" + c.name}
                       value={c.name}
                       onChange={() => select(c)}/>
-                    <label htmlFor={"checkbox-competence-" + c.name}>{c.name}</label>
+                    <label htmlFor={"checkbox-experience-" + c.name}>{c.name}</label>
                   </div>)
             }
           </div>
