@@ -1,3 +1,4 @@
+import {SkillId} from 'utils/helpers/Skills';
 
 export type JobId = string;
 export type Job = {name: string};
@@ -10,9 +11,10 @@ export const lessThan = (c1: Job, c2: Job): number =>
 
 export type JobRecommendation = {
   scores: {job: {id: JobId, name: string}, score: number}[],
-  graph: {
-    edges: [JobId, JobId][],
-    layout: Record<JobId, [number, number]>,
+  skill_graph: {
+    edges: [SkillId, SkillId][],
+    layout: Record<SkillId, [number, number]>,
+    centrality: Record<SkillId, number>,
   },
 };
 

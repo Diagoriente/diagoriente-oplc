@@ -74,6 +74,7 @@ def jobs_json(model: Model) -> dict[JobIdJson, JobJson]:
 class SkillGraphJson(BaseModel):
     edges: list[Tuple[SkillIdJson, SkillIdJson]]
     layout: dict[SkillIdJson, Tuple[np.float64, np.float64]]
+    centrality: dict[SkillIdJson, np.float64]
 
 
 def skill_graph_json(
@@ -90,7 +91,8 @@ def skill_graph_json(
             for u, v in graph.graph.edges
             ]
     layout = {skill_id_json(s): (x, y) for s, [x, y] in graph.layout.items()}
-    return SkillGraphJson(edges=edges, layout=layout)
+    centrality = {skill_id_json(s): c for s, c in  graph.centrality.items()}
+    return SkillGraphJson(edges=edges, layout=layout, centrality=centrality)
 
 
 class JobWithScoreJson(BaseModel):
@@ -99,7 +101,7 @@ class JobWithScoreJson(BaseModel):
 
 class JobRecommendationJson(BaseModel):
     scores: list[JobWithScoreJson]
-    graph: Optional[SkillGraphJson]
+    skill_graph: Optional[SkillGraphJson]
 
 
 def job_recommendation_json(
@@ -123,6 +125,6 @@ def job_recommendation_json(
     else:
         graph = None
 
-    return JobRecommendationJson(scores=scores, graph=graph)
+    return JobRecommendationJson(scores=scores, skill_graph=graph)
 
 

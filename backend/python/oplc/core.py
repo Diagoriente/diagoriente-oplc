@@ -51,12 +51,13 @@ def job_recommendation(
         experiences: list[ExperienceId],
         return_graph: bool,
         ) -> "JobRecommendation":
-    skills, g = skills_from_experiences(experiences_skills, experiences)
-    jobs = jobs_from_skills(jobs_skills, skills)
+    skill_scores, g = skills_from_experiences(experiences_skills, experiences)
+    jobs = jobs_from_skills(jobs_skills, skill_scores)
     if return_graph:
         sg = SkillGraph(
                 graph=g,
                 layout=nx.kamada_kawai_layout(g), # type: ignore
+                centrality=skill_scores.to_dict(), # type: ignore
                 )
         jobs = lens.skill_graph.set(sg)(jobs)
     return jobs
@@ -76,6 +77,7 @@ class JobRecommendation:
 class SkillGraph:
     graph: nx.Graph
     layout: dict[SkillId, npt.NDArray[np.float64]]
+    centrality: dict[SkillId, np.float64]
 
 
 # Each step relies on a distinct map: one relating experiences to skills and

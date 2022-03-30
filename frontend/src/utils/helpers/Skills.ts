@@ -1,3 +1,4 @@
+export type SkillId = string;
 export type Skill = {name: string};
 
 export const lessThan = (c1: Skill, c2: Skill): number =>

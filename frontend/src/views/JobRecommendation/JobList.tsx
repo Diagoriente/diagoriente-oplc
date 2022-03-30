@@ -1,23 +1,13 @@
 import React from 'react';
-import useFromBackend from 'hooks/useFromBackend';
 import Box from 'components/Box';
-import {ExperienceId} from 'utils/helpers/Experiences';
 import {JobRecommendation} from 'utils/helpers/Jobs';
-import {} from 'ramda';
 
 export const JobList: React.FC<{
-    experiences: ExperienceId[] | undefined
+    jobRecommendation?: JobRecommendation
     }> = ({
-    experiences
+    jobRecommendation
     }) => {
-  const [jobsRecommendation] = useFromBackend<JobRecommendation>(
-    "job_recommendation",
-    {
-      experiences: experiences
-    },
-    [experiences],
-    (r: any) => r as JobRecommendation,
-  )
+  
 
   return (
     <Box>
@@ -33,7 +23,7 @@ export const JobList: React.FC<{
         </thead>
         <tbody className="table-header-group ">
           {
-            jobsRecommendation?.scores.map(({job, score}) =>
+            jobRecommendation?.scores.map(({job, score}) =>
               <tr key={job.id} className="table-row">
                 <td className="px-2 table-cell text-right">{
                   score.toLocaleString(undefined, {
