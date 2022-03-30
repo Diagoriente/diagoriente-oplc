@@ -143,7 +143,6 @@ def skill_graph(
     """
     index = [x for x in experiences]
     selected_experiences: npt.NDArray[np.int32] = experiences_skills.df.loc[index, :].values
-    breakpoint()
     positive_skills: pa.Series = selected_experiences.sum(axis=0) > 0
     selected_skills: list[SkillId] = [
             s for s in experiences_skills.df.columns[positive_skills]

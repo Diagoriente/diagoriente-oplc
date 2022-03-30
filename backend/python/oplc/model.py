@@ -40,43 +40,53 @@ def init() -> Model:
     # TODO
     # check_data(experiences_skills_df, jobs_skills_df)
 
-    job_ids = list(range(len(jobs_skills_df)))
-    skill_ids = list(range(jobs_skills_df.shape[1]))
-    experience_ids = list(range(len(experiences_skills_df)))
-
     jobs = {i: core.Job(id=i, name=j) # type:ignore
-            for i, j in zip(job_ids, jobs_skills_df.loc[:, "Métier"])} # type:ignore
+            for i, j in enumerate(
+                            jobs_skills_df.loc[:, "Métier"], # type:ignore
+                            )
+            }
     skills = {i: core.Skill(id=i, name=s)
-              for i, s in zip(skill_ids, jobs_skills_df.drop(columns=["Métier"]).columns)}
+              for i, s in enumerate(
+                  jobs_skills_df.drop(columns=["Métier"])
+                  .columns # type:ignore
+                  )
+              }
     experiences = {
             i: core.Experience(
                 id=i,
-                name=exp, #type:ignore
-                exp_type=exp_type) #type:ignore
-            for i, (exp, exp_type) in zip(
-                experience_ids,
+                name=exp, # type:ignore
+                exp_type=exp_type, # type:ignore
+                )
+            for i, (exp, exp_type) in enumerate(
                 experiences_skills_df.loc[:, ["Expérience", "type"]].values # type:ignore
                 )
             }
 
-    experiences_skills_mat = (experiences_skills_df
-                              .drop(columns=["Expérience", "type"])
-                              .rename(columns={x.name: i for i, x in experiences.items()})
-                              )
+    job_ids = list(range(len(jobs)))
+    skill_ids = list(range(len(skills)))
+    experience_ids = list(range(len(experiences)))
 
-    if experiences_skills_mat is None:
-        raise ValueError("Expecting more columns in the experiences_skills data frame.")
+    experiences_skills_mat = (experiences_skills_df
+                             .loc[:, [skills[s].name for s in skill_ids]]
+                             .rename(
+                                columns={x.name: i for i, x in skills.items()}
+                                )
+                             )
 
     jobs_skills_mat = (jobs_skills_df
-                       .drop(columns=["Métier"])
-                       .rename(columns={j.name: i for i, j in jobs.items()}))
-
-    if jobs_skills_mat is None:
-        raise ValueError("Expecting more columns in the jobs_skills data frame.")
+                      .loc[:, [skills[s].name for s in skill_ids]]
+                      .rename(
+                          columns={x.name: i for i, x in skills.items()}
+                          )
+                      )
 
     m = Model(
-        experiences_skills=core.mk_experiences_skills(experiences_skills_mat),
-        jobs_skills=core.mk_jobs_skills(jobs_skills_mat),
+        experiences_skills=core.mk_experiences_skills(
+            experiences_skills_mat, # type:ignore
+            ),
+        jobs_skills=core.mk_jobs_skills(
+            jobs_skills_mat, # type:ignore
+            ),
         jobs=jobs,
         skills=skills,
         experiences=experiences,

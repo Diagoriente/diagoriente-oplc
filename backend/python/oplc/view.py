@@ -45,16 +45,15 @@ def jobs_json(model: Model) -> dict[JobId, JobJson]:
             }
 
 class SkillGraphJson(BaseModel):
-    edges: list[Tuple[SkillJson, SkillJson]]
-    layout: list[Tuple[SkillJson, Tuple[np.float64, np.float64]]]
+    edges: list[Tuple[SkillId, SkillId]]
+    layout: dict[SkillId, Tuple[np.float64, np.float64]]
 
 def skill_graph_json(
         graph: core.SkillGraph,
         ) -> SkillGraphJson:
-    return SkillGraphJson(
-            edges=[(u, v) for u, v in graph.graph.edges], # type:ignore
-            layout=[(s, (x, y)) for s, [x, y] in graph.layout.items()],
-            )
+    edges: list[Tuple[SkillId, SkillId]] = [(u, v) for u, v in graph.graph.edges]
+    layout = {s: (x, y) for s, [x, y] in graph.layout.items()}
+    return SkillGraphJson(edges=edges, layout=layout)
 
 class JobWithScoreJson(BaseModel):
     job: JobId
