@@ -53,7 +53,7 @@ def skill_json(skill: core.Skill) -> SkillJson:
 
 def skills_json(model: Model) -> dict[SkillIdJson, SkillJson]:
     return {skill_id_json(i): SkillJson(name=s.name)
-            for i, s in model.jobs.items()
+            for i, s in model.skills.items()
             }
 
 
