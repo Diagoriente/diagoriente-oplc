@@ -1,11 +1,10 @@
 import React, {useState} from 'react';
 import JobList from './JobList';
 import ExperienceSelector from './ExperienceSelector';
-import {Experience} from 'utils/helpers/Experiences';
-import {OrderedSet} from 'immutable';
+import {ExperienceId} from 'utils/helpers/Experiences';
 
 export const JobRecommendation: React.FC = () => {
-  const [selectedExperiences, setSelectedExperiences] = useState<OrderedSet<Experience> | undefined>(undefined);
+  const [selectedExperiences, setSelectedExperiences] = useState<ExperienceId[] | undefined>(undefined);
 
   return (
     <div className="flex flex-col">

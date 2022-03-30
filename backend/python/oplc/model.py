@@ -62,9 +62,7 @@ def init() -> Model:
                 )
             }
 
-    job_ids = list(range(len(jobs)))
     skill_ids = list(range(len(skills)))
-    experience_ids = list(range(len(experiences)))
 
     experiences_skills_mat = (experiences_skills_df
                              .loc[:, [skills[s].name for s in skill_ids]]

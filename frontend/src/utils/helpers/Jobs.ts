@@ -1,8 +1,6 @@
-import {Record, RecordOf} from 'immutable';
 
-export type Job = RecordOf<{name: string}>;
-
-export const Job = Record({name: ""});
+export type JobId = string;
+export type Job = {name: string};
 
 export const lessThan = (c1: Job, c2: Job): number => 
   c1.name < c2.name ? -1 :
@@ -10,13 +8,11 @@ export const lessThan = (c1: Job, c2: Job): number =>
   1;
 
 
-export type JobRecommendation = RecordOf<{job: Job, score: number}>
-
-export const JobRecommendation = Record({job: Job(), score: 0})
-
-export const lessThanScore = (c1: JobRecommendation, c2: JobRecommendation): number => 
-  c1.score < c2.score ? -1 :
-  c1.score === c2.score ? 0 :
-  1;
-
+export type JobRecommendation = {
+  scores: {job: {id: JobId, name: string}, score: number}[],
+  graph: {
+    edges: [JobId, JobId][],
+    layout: Record<JobId, [number, number]>,
+  },
+};
 
