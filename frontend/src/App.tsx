@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import {JobRecommendation} from './views/JobRecommendation/JobRecommendation'
+import {JobRecommendation} from './views/JobRecommendation/JobRecommendation';
 
 function App() {
   return (
