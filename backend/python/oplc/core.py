@@ -8,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 import networkx as nx
 from lenses import lens
+from math import floor, sqrt
 
 
 # The objective of this application is to make job recommendations based on an
@@ -53,10 +54,47 @@ def job_recommendation(
         ) -> "JobRecommendation":
     skill_scores, g = skills_from_experiences(experiences_skills, experiences)
     jobs = jobs_from_skills(jobs_skills, skill_scores)
+
     if return_graph:
+        # Get connected subgraphs and lay them out separately so they don't
+        # overlap.
+        components: list[nx.Graph] = [
+                g.subgraph(c).copy() #type:ignore
+                for c in nx.connected_components(g)
+                ]
+
+        # Choose a number of columns and rows just big enough to fit all the
+        # components.
+        n_components = len(components)
+        n = floor(sqrt(n_components))
+        if n * n == n_components:
+            n_row = n
+            n_col = n
+        elif n * (n + 1) > n_components:
+            n_row = n
+            n_col = n + 1
+        else:
+            n_row = n + 1
+            n_col = n + 1
+
+        centers = [(x, y) for y in range(n_row) for x in range(n_col)]
+
+        layouts: list[dict[SkillId, npt.NDArray[np.float64]]] = [
+                nx.kamada_kawai_layout(
+                    c, # type:ignore
+                    center = (x, y),
+                    scale = 0.5,
+                    )
+                for (x, y), c in zip(centers, components)
+                ]
+
+        merged_layouts = {}
+        for l in layouts:
+            merged_layouts.update(l)
+
         sg = SkillGraph(
                 graph=g,
-                layout=nx.kamada_kawai_layout(g), # type: ignore
+                layout=merged_layouts, # type: ignore
                 centrality=skill_scores.to_dict(), # type: ignore
                 )
         jobs = lens.skill_graph.set(sg)(jobs)
