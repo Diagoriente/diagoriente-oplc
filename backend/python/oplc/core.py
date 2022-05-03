@@ -2,7 +2,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Iterable, Tuple, Optional
+from typing import Iterable, Tuple, Optional, Callable
 import pandas as pa
 import numpy as np
 import numpy.typing as npt
@@ -51,8 +51,10 @@ def job_recommendation(
         jobs_skills: "JobsSkills",
         experiences: list[ExperienceId],
         return_graph: bool,
+        skill_centrality_measure: Callable[[nx.Graph], dict[SkillId, float]]
         ) -> "JobRecommendation":
-    skill_scores, g = skills_from_experiences(experiences_skills, experiences)
+    skill_scores, g = skills_from_experiences(experiences_skills, experiences,
+                                              skill_centrality_measure)
     jobs = jobs_from_skills(jobs_skills, skill_scores)
 
     if return_graph:
@@ -146,9 +148,10 @@ def mk_experiences_skills(df: pa.DataFrame) -> ExperiencesSkills:
 def skills_from_experiences(
         experiences_skills: ExperiencesSkills,
         experiences: list[ExperienceId],
+        skill_centrality_measure: Callable[[nx.Graph], dict[SkillId, float]]
         ) -> Tuple[pa.Series, nx.Graph]:
     g: nx.Graph = skill_graph(experiences_skills, experiences)
-    scores: pa.Series = skill_scores(g)
+    scores: pa.Series = skill_scores(g, skill_centrality_measure)
     return scores, g
 
 def skill_graph(
@@ -196,7 +199,10 @@ def skill_graph(
     return g
 
 
-def skill_scores(g: nx.Graph) -> pa.Series:
+def skill_scores(
+        g: nx.Graph,
+        centrality_measure: Callable[[nx.Graph], dict[SkillId, float]],
+                 ) -> pa.Series:
     """Betweenness centrality of each skill in the graph.
 
     >>> g = nx.Graph()
@@ -205,7 +211,7 @@ def skill_scores(g: nx.Graph) -> pa.Series:
     >>> g.add_edge(1), 1))
     >>> g.add_edge(2), 2))
     >>> g.add_edge(3), 3))
-    >>> skill_scores(g)
+    >>> skill_scores(g, lambda g: dict(nx.betweenness_centrality(g, endpoints=True))))
     1    0.666667
     2    1.000000
     3    0.666667
@@ -216,7 +222,7 @@ def skill_scores(g: nx.Graph) -> pa.Series:
     >>> g.add_edge(2), 4))
     >>> g.add_edge(3), 4))
     >>> g.add_edge(4), 5))
-    >>> skill_scores(g)
+    >>> skill_scores(g, lambda g: dict(nx.betweenness_centrality(g, endpoints=True)))
     1    0.45
     2    0.50
     3    0.50
@@ -224,7 +230,7 @@ def skill_scores(g: nx.Graph) -> pa.Series:
     5    0.40
     dtype: float64
     """
-    centrality: dict[SkillId, float] = dict(nx.betweenness_centrality(g, endpoints=True)) # type:ignore
+    centrality: dict[SkillId, float] = dict(centrality_measure(g)) # type:ignore
     return pa.Series({s: c  for s, c in centrality.items()})
 
 
