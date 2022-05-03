@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from oplc.config import API_ROOT_PATH, CORS_ALLOWED_ORIGINS
 from oplc import model, action, view
+import networkx as nx
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -54,4 +55,5 @@ async def post_job_recommendation(
             model.get(),
             experiences,
             return_graph,
+            lambda g: nx.betweenness_centrality(g, endpoints=True),
             )

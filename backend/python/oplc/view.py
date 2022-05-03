@@ -6,8 +6,9 @@ from pydantic import BaseModel
 from oplc import core
 from oplc.model import Model
 import numpy as np
+import networkx as nx
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Callable
 
 
 JobIdJson = str
@@ -108,12 +109,14 @@ def job_recommendation_json(
         model: Model,
         experiences: list[ExperienceIdJson],
         return_graph: bool,
+        skill_centrality_measure: Callable[[nx.Graph], float]
         ) -> JobRecommendationJson:
     jr = core.job_recommendation(
                 model.experiences_skills,
                 model.jobs_skills,
                 [experience_id_from_json(e) for e in experiences],
                 return_graph=return_graph,
+                skill_centrality_measure=skill_centrality_measure,
                 )
     scores = [
         JobWithScoreJson(job=job_json(model.jobs[j]), score=s)

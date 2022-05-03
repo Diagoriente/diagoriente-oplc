@@ -38,8 +38,8 @@ def pull_data_source() -> DataFrameUpdate:
     es_df = load_data_frame(es_csv)
     js_df = load_data_frame(js_csv)
     return DataFrameUpdate(
-            experiences_skills_df=es_df,
-            jobs_skills_df=js_df,
+            experiences_skills_df=es_df, # type: ignore
+            jobs_skills_df=js_df, # type: ignore
             )
 
 Action = Union[
