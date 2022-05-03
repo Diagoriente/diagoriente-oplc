@@ -10,4 +10,4 @@ COPY case-studies /app/case-studies
 
 ENV PYTHONPATH "."
 
-CMD ["pipenv", "run", "streamlit", "run", "case-studies/main.py", "--server.port", "8501"]
+CMD ["pipenv", "run", "streamlit", "run", "case-studies/main.py", "--server.address", "0.0.0.0", "--server.port", "8501", "--server.baseUrlPath", "case-studies"]

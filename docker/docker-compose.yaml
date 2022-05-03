@@ -26,7 +26,6 @@ services:
             dockerfile: docker/streamlit.Dockerfile
         environment:
             CORS_ALLOWED_ORIGINS: $CORS_ALLOWED_ORIGINS
-            STREAMLIT_SERVER_BASE_URL_PATH: $STREAMLIT_SERVER_BASE_URL_PATH
             API_ROOT_PATH: $API_ROOT_PATH
         ports:
            - $STREAMLIT_PORT:8501
