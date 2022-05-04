@@ -61,6 +61,9 @@ measures: list[tuple[str, Callable[[nx.Graph], dict[SkillId, float]]]] = [
         ("closeness",
          lambda g: nx.closeness_centrality(g),
          ),
+        ("eigenvector",
+         lambda g: nx.eigenvector_centrality(g, tol=1e5),
+         ),
         ]
 
 # Prevent figures from being created implicitly and using memory
@@ -94,7 +97,6 @@ def select_experiences(experience_ids: list[ExperienceId]):
     return exps
 
 def show_experiences(experience_ids):
-    st.text("Experiences sélectionnées")
     df = pa.DataFrame({
         "intitulé": {e: model.experiences[e].name for e in experience_ids},
         "type": {e: model.experiences[e].exp_type for e in experience_ids},
@@ -104,7 +106,6 @@ def show_experiences(experience_ids):
 
 
 def show_skills(skill_ids):
-    st.text("Compétences dérivées")
     df = pa.DataFrame({
         "intitulé": {e: model.experiences[e].name for e in skill_ids},
         "type": {e: model.experiences[e].exp_type for e in skill_ids},
@@ -168,9 +169,13 @@ def run():
         st.header(f"Cas de test {i+1}")
         exp_ids = select_experiences(experience_ids(exp))
 
+        with st.expander("Voir les expériences"):
+            show_experiences(exp_ids)
+
         st.subheader("Graphes de compétences")
         columns = st.columns(2)
         for j, (m_name, m_func) in enumerate(measures):
+
             job_rec = job_recommendation(
                 model.experiences_skills,
                 model.jobs_skills,
@@ -183,11 +188,8 @@ def run():
                 st.text(m_name)
                 st.write(show_graph(job_rec, centrality_measure=m_func))
 
-        st.subheader("Résultats détaillés")
+                with st.expander("Voir les compétences"):
+                    show_skills(job_rec.skill_graph.layout.keys())
 
-        col_exp, col_skills = st.columns(2)
-        with col_exp:
-            show_experiences(exp_ids)
 
-        with col_skills:
-            show_skills(job_rec.skill_graph.layout.keys())
+
