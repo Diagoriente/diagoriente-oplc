@@ -52,17 +52,20 @@ experiences = [
 ]
 
 measures: list[tuple[str, Callable[[nx.Graph], dict[SkillId, float]]]] = [
-        ("betweenness_centrality",
-         lambda g: nx.betweenness_centrality(g, endpoints=True),
-         ),
         ("degree centrality",
          lambda g: nx.degree_centrality(g),
          ),
-        ("closeness",
+        ("betweenness_centrality",
+         lambda g: nx.betweenness_centrality(g, endpoints=True),
+         ),
+        ("closeness centrality",
          lambda g: nx.closeness_centrality(g),
          ),
-        ("eigenvector",
-         lambda g: nx.eigenvector_centrality(g, tol=1e5),
+        ("eigenvector centrality",
+         lambda g: nx.eigenvector_centrality(g, tol=1e6),
+         ),
+        ("harmonic centrality",
+         lambda g: nx.harmonic_centrality(g),
          ),
         ]
 
