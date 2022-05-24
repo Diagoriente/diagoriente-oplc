@@ -40,9 +40,24 @@ def show_skills(dist):
     tsne.loc[:, "name"] = [skills[i].name for i in tsne.index]
 
     fig = figure(tools="crosshair,hover,wheel_zoom,zoom_in,zoom_out,box_zoom,reset",
-                 tooltips=[("", "@name")])
+                 tooltips=[("", "@name")],
+                 title="Projection des compétences en 2D en respectant les distances")
     fig.scatter("x", "y", source=ColumnDataSource(data=tsne),
                 fill_alpha=0.6, line_color=None, size=10)
+    st.bokeh_chart(fig)
+
+    dist_flat = dist.values[np.tril_indices_from(dist.values, k=-1)]
+    hist, edges = np.histogram(dist_flat)
+    hist_df = pa.DataFrame({"count": hist,
+                            "left": edges[:-1],
+                            "right": edges[1:],
+                            "interval": [f"[{l}; {r}[" for l,r in zip(edges[:-1], edges[1:])]})
+    fig = figure(tools="hover,box_zoom,reset", height=200,
+                 tooltips=[("Distance", "@interval"),
+                           ("Count", "@count")],
+                 title="Distribution des distances",
+                 )
+    fig.quad(left="left", right="right", top="count", bottom=0, source=hist_df)
     st.bokeh_chart(fig)
 
 
@@ -53,7 +68,6 @@ def show_skills(dist):
       .drop(columns=["level_0", "level_1"])
       .rename(columns={0: "distance"})
       )
-
 
     with st.expander("Exemples de compétences proches"):
         st.table(dist_long.head(20))
