@@ -54,7 +54,8 @@ def show_skills(dist):
                 fill_alpha=0.6, line_color=None, size=10)
     st.bokeh_chart(fig)
 
-    dist_flat = dist.values[np.tril_indices_from(dist.values, k=-1)]
+    # Take all elements except the diagonal
+    dist_flat = dist.values[~np.eye(len(dist.values), dtype=bool)]
     hist, edges = np.histogram(dist_flat)
     hist_df = pa.DataFrame({"count": hist,
                             "left": edges[:-1],
@@ -64,6 +65,8 @@ def show_skills(dist):
                  tooltips=[("Distance", "@interval"),
                            ("Count", "@count")],
                  title="Distribution des distances",
+                 x_axis_label="Distance",
+                 y_axis_label="Nombre de paires ordonnées",
                  )
     fig.quad(left="left", right="right", top="count", bottom=0, source=hist_df)
     st.bokeh_chart(fig)
@@ -113,6 +116,25 @@ def dist_cooc(metric, progress_bar):
 
 
 def run():
+
+    st.info("""
+    Objectif : Comparer différentes mesures de distance entre compétences pour servir de base aux calculs d'accessibilité de métiers et de compétences.
+
+    Démarche :
+    - Pour différentes mesures de distance entre 2 compétences :
+        - Calculer les distances pour toutes les paires de compétences
+        - Représenter les compétences en 2D avec l'algorithme de réduction de dimensions t-SNE
+        - Évaluer les résultats à l'œil pour obtenir une première idée des qualités des distances
+    - On teste 3 approches pour calculer les distances : la première basée sur le graphe de coocurrence de compétences, la seconde sur une comparaison des compétences en termes de métiers auxquelles elles sont rattachées, la troisième sur une comparaison des compétences en termes de compétences avec lesquelles elles sont associées par le biais des métiers. La 2e et la 3e approche passent par une représentation des compétences en vecteur (vecteurs de métiers associés pour la 2e et vecteurs de compétences associées pour la 3e). Elles sont mises en œuvre avec plusieurs mesures de distance entre vecteurs (euclidienne, corrélation, cosinus).
+
+    Résultats :
+    - Certaines méthodes produisent des groupes de compétences cohérentes, les groupes étant séparés les uns des autres. Les meilleurs exemples sont ceux de l'approche 3 avec les distances corrélation et cosinus. Cet effet d'augmenter la distance entre compétences non liées pourrait nous aider à éviter les recommandations aberrantes.
+    - La première approche basée sur le chemin plus court donne une distance qui manque de finesse. L'histogramme des distances montre seulement 3 valeurs de distance possibles: 1, 2 ou 3. Toutes les compétences sont à 1, 2 ou 3 pas de toutes les autres dans le graphe. Cela limite la possibilité de distinguer des groupes: les compétences sont à une distance de 2 de la plupart des autres. Pour celles qui sont proches (distance de 1), on ne peut pas faire la différence entre celles qui ont un métier en commun et celles qui ont de nombreux métiers en commun.
+    - Dans les approches 2 et 3, la distance euclidienne produit des distances avec une distribution en cloche, alors que les distances de corrélation et cosinus ont des distributions beaucoup plus asymmétriques. C'est peut-être ce qui offre dans l'approche 2 et 3 cet effet de groupe reserrés et bien séparés les uns des autres: les compétences sont d'avantage éloignées de la plupart des compétences sauf de celles du même groupe, ce qui donne quelques petites distances et de nombreuses grandes distances. L'absence de cet effet avec la distance euclidienne est peut-être une conséquence du fléau de la dimensionalité.
+    - L'effet groupe est intéressant car il identifie plus clairement des compétences proches et des compétences éloignées et évite de nombreuses distances intermédiaires, que l'on observe beaucoup plus avec l'approche 1 ou la distance euclidienne.
+    """)
+
+
     st.header("Approche 1: Longueur du chemin le plus court entre deux compétences dans le graphe de compétences")
 
     dist_shortest = pa.DataFrame({u: d for u,d in nx.all_pairs_shortest_path_length(sg)}).sort_index()
@@ -146,9 +168,20 @@ def run():
 
 
 
+    st.subheader("Distance cosinus entre les vecteurs")
+
+    dist_jobs_correlation = pa.DataFrame(
+            squareform(pdist(skills_jobs, metric="cosine")),
+            index=skills_jobs.index,
+            columns=skills_jobs.index,
+            )
+    show_skills(dist_jobs_correlation)
+
+
+
     st.header("Approche 3: On compare les compétences par rapport aux compétences avec lequelles elles sont associées")
     st.write("Chaque compétence est représentée par un vecteur d'entiers de taille égale au nombre de compétences où un élément est égal au nombre de fois que la compétence est associée à la compétence correspondante dans les métiers.")
-    st.write("Avant de calculer la distance (euclidienne, correlation, etc) entre deux compétences i et j, on supprime des deux vecteurs associés les éléments en position i et j, sinon les grandes valeurs de ces éléments ont trop de poids dans les calculs.")
+    st.write("Avant de calculer la distance (euclidienne, correlation, etc) entre deux compétences i et j, on supprime des deux vecteurs associés les éléments en position i et j. Ces éléments correspondent au nombre de fois qu'une compétence est associée à elle-même. Ces valeurs sont naturellement grandes et ont trop de poids dans les calculs si on les laisse, écrasant les autres valeurs qui portent pourtant plus d'information.")
 
     st.subheader("Distance euclidienne")
     progress = st.progress(0)
@@ -161,3 +194,9 @@ def run():
     dist_cooc_correlation = dist_cooc("correlation", progress)
     progress.progress(1.0)
     show_skills(dist_cooc_correlation)
+
+    st.subheader("Distance cosinus")
+    progress = st.progress(0)
+    dist_cooc_cosine = dist_cooc("cosine", progress)
+    progress.progress(1.0)
+    show_skills(dist_cooc_cosine)
