@@ -14,6 +14,7 @@ from bokeh.plotting import figure, show
 from bokeh.models import ColumnDataSource
 from sklearn.manifold import TSNE
 from typing import Callable
+from scipy.spatial.distance import pdist, squareform
 
 plt.ioff()
 
@@ -78,7 +79,7 @@ def show_skills(dist):
 
 
 def run():
-    st.header("Distance: chemin plus court")
+    st.header("Longueur de chemin plus court dans le graphe de compétences")
 
     dist_shortest = pa.DataFrame({u: d for u,d in nx.all_pairs_shortest_path_length(sg)}).sort_index()
 
@@ -86,21 +87,28 @@ def run():
 
 
 
-    st.header("Distance: similarité des métiers")
+    st.header("Distance euclidienne entre les vecteurs métiers")
 
     skills_jobs = oplc.model.model.jobs_skills.df.transpose()
+    # Remove skills that are not associated to any job
     skills_jobs = skills_jobs.loc[skills_jobs.sum(axis=1) > 0, :]
-    dist_jobs_dot_product = 1 / (1 + skills_jobs.dot(skills_jobs.transpose()))
-    show_skills(dist_jobs_dot_product)
+    dist_jobs_euclidean = pa.DataFrame(
+            squareform(pdist(skills_jobs, metric="euclidean")),
+            index=skills_jobs.index,
+            columns=skills_jobs.index,
+            )
+    show_skills(dist_jobs_euclidean)
 
 
 
-    st.header("Distance: similarité des métiers (vecteurs normés)")
+    st.header("Distance corrélation entre les vecteurs métiers")
 
-    skills_jobs_norm = skills_jobs.div(skills_jobs.sum(axis=1), axis=0)
-    skills_jobs_norm = skills_jobs_norm.dropna()
-    dist_jobs_dot_norm = 1 / (1 + skills_jobs_norm.dot(skills_jobs_norm.transpose()))
-    show_skills(dist_jobs_dot_norm)
+    dist_jobs_correlation = pa.DataFrame(
+            squareform(pdist(skills_jobs, metric="correlation")),
+            index=skills_jobs.index,
+            columns=skills_jobs.index,
+            )
+    show_skills(dist_jobs_correlation)
 
 
 
