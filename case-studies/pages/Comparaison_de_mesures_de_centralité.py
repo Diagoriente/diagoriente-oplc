@@ -10,6 +10,8 @@ import pandas as pa
 import streamlit as st
 from typing import Callable
 
+st.header("Comparaison de mesures de centralité")
+
 experiences = [
         [
             "Maintenance électrique",
@@ -164,35 +166,33 @@ def show_graph(job_rec: JobRecommendation,
     return fig
 
 
-def run():
+st.title("Comparaison de mesures de centralité")
 
-    st.title("Comparaison de mesures de centralité")
+for i, exp in enumerate(experiences):
+    st.header(f"Cas de test {i+1}")
+    exp_ids = select_experiences(experience_ids(exp))
 
-    for i, exp in enumerate(experiences):
-        st.header(f"Cas de test {i+1}")
-        exp_ids = select_experiences(experience_ids(exp))
+    with st.expander("Voir les expériences"):
+        show_experiences(exp_ids)
 
-        with st.expander("Voir les expériences"):
-            show_experiences(exp_ids)
+    st.subheader("Graphes de compétences")
+    columns = st.columns(2)
+    for j, (m_name, m_func) in enumerate(measures):
 
-        st.subheader("Graphes de compétences")
-        columns = st.columns(2)
-        for j, (m_name, m_func) in enumerate(measures):
+        job_rec = job_recommendation(
+            model.experiences_skills,
+            model.jobs_skills,
+            exp_ids,
+            return_graph=True,
+            skill_centrality_measure=m_func,
+        )
 
-            job_rec = job_recommendation(
-                model.experiences_skills,
-                model.jobs_skills,
-                exp_ids,
-                return_graph=True,
-                skill_centrality_measure=m_func,
-            )
+        with columns[j % len(columns)]:
+            st.text(m_name)
+            st.write(show_graph(job_rec, centrality_measure=m_func))
 
-            with columns[j % len(columns)]:
-                st.text(m_name)
-                st.write(show_graph(job_rec, centrality_measure=m_func))
-
-                with st.expander("Voir les compétences"):
-                    show_skills(job_rec.skill_graph.layout.keys())
+            with st.expander("Voir les compétences"):
+                show_skills(job_rec.skill_graph.layout.keys())
 
 
 
