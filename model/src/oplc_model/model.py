@@ -2,13 +2,14 @@
 """
 
 from dataclasses import dataclass
-from typing import Iterable, Tuple, Optional, Callable
+from typing import Iterable, Tuple, Optional, Callable, NewType
 import pandas as pa
 import numpy as np
 import numpy.typing as npt
 import networkx as nx
 from lenses import lens
 from math import floor, sqrt
+from datetime import datetime
 
 
 # The objective of this application is to make job recommendations based on an
@@ -28,11 +29,23 @@ class Experience:
 
 SkillId = int
 
+
+def mk_experiences(
+        experiences: dict[int, tuple[str, str]]
+        ) -> dict[int, Experience]:
+    return {i: Experience(id=i, name=exp, exp_type=exp_type)
+            for i, (exp, exp_type) in experiences.items()
+        }
+
+
 @dataclass(frozen=True)
 class Skill:
     id: SkillId
     name: str
 
+
+def mk_skills(skills: dict[int, str]) -> dict[int, Skill]:
+    return {i: Skill(id=i, name=n) for i, n in skills.items()}
 
 JobId = int
 
@@ -40,6 +53,15 @@ JobId = int
 class Job:
     id: JobId
     name: str
+
+def mk_jobs(jobs: dict[int, str]) -> dict[int, Job]:
+    return {i: Job(id=i, name=n) for i, n in jobs.items()}
+
+def job_id_by_name(jobs: dict[int, Job], name: str) -> int | None:
+    for j in jobs.values():
+        if j.name == name:
+            return j.id
+    return None
 
 
 # Recommendations are constructed in two steps: first, infer the user's skill
@@ -248,3 +270,99 @@ def jobs_from_skills(
                               .sort_values(ascending=False))
     job_scores = job_scores.loc[job_scores > 0]
     return JobRecommendation(scores=job_scores, skill_graph=None)
+
+
+@dataclass(frozen=True)
+class SkillCooccurrence:
+    df: pa.DataFrame
+
+
+def skill_cooccurrence(jobs_skills: JobsSkills) -> "SkillCooccurrence":
+    skills_jobs = jobs_skills.df.transpose()
+    # Remove skills that are not associated to any job
+    # skills_jobs = skills_jobs.loc[skills_jobs.sum(axis=1) > 0, :]
+
+    return skills_jobs.dot(skills_jobs.transpose())
+
+
+ExperienceWeights = NewType("ExperienceWeights", pa.DataFrame)
+IndivSkills = NewType("IndivSkills", pa.DataFrame)
+
+
+def experience_weights(
+        indiv_exp: pa.DataFrame,
+        jobs: dict[int, Job],
+        experiences: dict[int, Experience],
+        experiences_skills: ExperiencesSkills,
+        ) -> tuple[ExperienceWeights, IndivSkills]:
+
+    exp_weight = pa.DataFrame({
+        "experience_id": indiv_exp.loc[:, "experience_id"],
+        "begin": indiv_exp.loc[:, "begin"],
+        "end": indiv_exp.loc[:, "end"],
+        })
+
+    today = datetime.today()
+
+    for i in exp_weight.index:
+        begin = pa.to_datetime(exp_weight.loc[i, "begin"])
+        end = pa.to_datetime(exp_weight.loc[i, "end"])
+        years = list(range(begin.year, end.year + 1))
+        start_day_per_year = (
+                [begin]
+                + [datetime(year=y, month=1, day=1) for y in years[1:]]
+                )
+        end_day_per_year = (
+                [datetime(year=y, month=12, day=31) for y in years[:-1]]
+                + [end]
+                )
+        days_per_year = [(datetime(year=y+1, month=1, day=1) - datetime(year=y, month=1, day=1)).days 
+                          for y in years]
+        # Proportion of year worked for each year
+        year_proportion = [((e - s).days + 1) / d
+                           for s,e,d
+                           in zip(start_day_per_year, end_day_per_year, days_per_year)]
+        # Experience recency per year
+        year_recency = [(today - e).days / d for d, e in zip(days_per_year, end_day_per_year)]
+
+        year_weight = [p / (r + 1) for p, r in zip(year_proportion, year_recency)]
+
+        experience_weight = sum(year_weight)
+
+        exp_weight.loc[i, "duration"] = sum(year_proportion)
+        exp_weight.loc[i, "rencency"] = year_recency[-1]
+        exp_weight.loc[i, "weight"] = experience_weight
+        exp_weight.loc[i, "job_id"] = job_id_by_name(experiences[i].name)
+
+
+    # Multiply each experience skill (row) vector by the corresponding
+    # experience weight and sum the results
+    indiv_skills = pa.DataFrame({
+        "weight": (experiences_skills.df.loc[exp_weight.experience_id, :]
+                  .set_index(exp_weight.index)
+                  .mul(exp_weight.weight, axis="index")
+                  .sum()
+                  ),
+        })
+
+    return ExperienceWeights(exp_weight), IndivSkills(indiv_skills)
+
+
+JobDistance = NewType("JobDistance", pa.DataFrame)
+
+
+def job_distance(
+        jobs_skills: JobsSkills,
+        indiv_skills: IndivSkills,
+        ) -> JobDistance:
+    dist_job = pa.Series(np.empty(jobs_skills.shape[0]),
+                          index=jobs_skills.index,
+                         )
+
+    for j in jobs_skills.index:
+        dist_job.loc[j] = pdist([indiv_skills.loc[jobs_skills.columns].weight,
+                                 jobs_skills.loc[j, :],
+                                 ],
+                                 metric=metric)
+
+    return JobDistance(dist_job.sort_values())

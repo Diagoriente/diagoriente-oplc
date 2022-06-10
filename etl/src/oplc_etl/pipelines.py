@@ -198,17 +198,64 @@ def load_data_frame(ds: LocalCsv) -> pa.DataFrame :
     return pa.DataFrame(pa.read_csv(local_csv_path(ds.kind)))
 
 
-def experiences_skills_df(skip_if_exists: bool = True):
+def experiences_skills_df():
     return load_data_frame(pull_source(
             experiences_skills_data_source,
             "experiences_skills",
-            skip_if_exists=skip_if_exists,
             ))
 
 
-def jobs_skills_df(skip_if_exists: bool = True):
+def jobs_skills_df() -> pa.DataFrame:
     return load_data_frame(pull_source(
             jobs_skills_data_source,
-            "jobs_skills",
-            skip_if_exists=skip_if_exists,
+            "jobs_skills"
             ))
+
+
+def jobs() -> dict[int, str]:
+    return {i: j # type:ignore
+        for i, j in enumerate(
+                        jobs_skills_df().loc[:, "Métier"], # type:ignore
+                        )
+        }
+
+
+def skills() -> dict[int, str]:
+    return {i: s
+          for i, s in enumerate(
+              jobs_skills_df().drop(columns=["Métier"])
+              .columns # type:ignore
+              )
+          }
+
+
+def skill_ids() -> list[int]:
+    return list(range(len(skills())))
+
+
+def experiences() -> dict[int, tuple[str, str]]:
+    return {i: (exp, exp_type)
+            for i, (exp, exp_type) in enumerate(
+                experiences_skills_df.loc[:, ["Expérience", "type"]].values # type:ignore
+                )
+            }
+
+
+def experiences_skills() -> pa.DataFrame:
+    skills_ = skills()
+    return (experiences_skills_df
+            .loc[:, [skills_[s] for s in skill_ids()]]
+            .rename(
+               columns={x.name: i for i, x in skills.items()}
+               )
+            )
+
+
+def jobs_skills() -> pa.DataFrame:
+    return (jobs_skills_df
+            .loc[:, [skills[s].name for s in skill_ids]]
+            .rename(
+                columns={x.name: i for i, x in skills.items()}
+                )
+            )
+
