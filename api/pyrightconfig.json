@@ -1,12 +1,12 @@
 {
-    "include": ["backend/python/oplc"],
+    "include": ["src"],
     "exclude": [
         "**/__pycache__"
     ],
     "typeCheckingMode": "strict",
-    "extraPaths": ["backend/python/", ".venv/lib/python3.9/site-packages/"],
-    "venv": "Dev-C2mY5UOt",
-    "venvPath": ".venv",
+    "extraPaths": [".venv/lib/python3.9/site-packages/"],
+    "venv": "api-Rc_MGKln",
+    "venvPath": "/home/guillaume-pro/.local/share/virtualenvs/",
     "useLibraryCodeForTypes": false,
     "reportUnknownVariableType": false,
     "reportUnknownMemberType": false,

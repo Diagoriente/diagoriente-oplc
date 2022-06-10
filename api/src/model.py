@@ -9,14 +9,9 @@ oplc.core.
 from dataclasses import dataclass
 
 from lenses import lens
-from oplc import core
-from oplc.pipelines import (
-    experiences_skills_data_source,
-    jobs_skills_data_source,
-    pull_source,
-    load_data_frame,
-)
-import oplc.action as act
+import oplc_model.model as core
+import oplc_etl.pipelines
+from src import action
 
 @dataclass
 class Model:
@@ -28,24 +23,19 @@ class Model:
 
 
 def init() -> Model:
-    experiences_skills_df = load_data_frame(pull_source(
-                experiences_skills_data_source,
-                "experiences_skills"
-                ))
-    jobs_skills_df = load_data_frame(pull_source(
-                jobs_skills_data_source,
-                "jobs_skills"
-                ))
+    experiences_skills_df = oplc_etl.pipelines.experiences_skills_df()
+    jobs_skills_df = oplc_etl.pipelines.jobs_skills_df()
+
 
     # TODO
     # check_data(experiences_skills_df, jobs_skills_df)
 
-    jobs = {i: core.Job(id=i, name=j) # type:ignore
+    jobs: dict[int, core.Job] = {i: core.Job(id=i, name=j) # type:ignore
             for i, j in enumerate(
                             jobs_skills_df.loc[:, "Métier"], # type:ignore
                             )
             }
-    skills = {i: core.Skill(id=i, name=s)
+    skills: dict[int, core.Skill] = {i: core.Skill(id=i, name=s)
               for i, s in enumerate(
                   jobs_skills_df.drop(columns=["Métier"])
                   .columns # type:ignore
@@ -98,14 +88,14 @@ def get() -> Model:
     return model
 
 
-def present(action: act.Action) -> Model:
+def present(act: action.Action) -> Model:
     global model
 
-    if isinstance(action, act.DataFrameUpdate):
+    if isinstance(act, action.DataFrameUpdate):
         set_es = lens.experiences_skills.set(
-                core.mk_experiences_skills(action.experiences_skills_df))
+                core.mk_experiences_skills(act.experiences_skills_df))
         set_js = lens.jobs_skills.set(
-                core.mk_jobs_skills(action.jobs_skills_df))
+                core.mk_jobs_skills(act.jobs_skills_df))
 
         m = model
         m = set_js(m)

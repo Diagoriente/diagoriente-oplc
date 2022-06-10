@@ -5,12 +5,7 @@ function to trigger a model update.
 """
 
 from dataclasses import dataclass
-from oplc.pipelines import (
-        experiences_skills_data_source,
-        jobs_skills_data_source,
-        pull_source,
-        load_data_frame,
-        )
+import oplc_etl.pipelines
 import pandas as pa
 from typing import Union
 
@@ -26,17 +21,8 @@ class DataFrameUpdate:
 
 
 def pull_data_source() -> DataFrameUpdate:
-    es_csv = pull_source(
-            experiences_skills_data_source,
-            "experiences_skills",
-            skip_if_exists=False)
-    js_csv = pull_source(
-            jobs_skills_data_source,
-            "jobs_skills",
-            skip_if_exists=False)
-
-    es_df = load_data_frame(es_csv)
-    js_df = load_data_frame(js_csv)
+    es_df = oplc_etl.pipelines.experiences_skills_df(skip_if_exists=False)
+    js_df = oplc_etl.pipelines.jobs_skills_df(skip_if_exists=False)
     return DataFrameUpdate(
             experiences_skills_df=es_df, # type: ignore
             jobs_skills_df=js_df, # type: ignore

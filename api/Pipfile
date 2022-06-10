@@ -4,27 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-lenses = "*"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version = "*"}
-numpy = "*"
-pandas = "*"
-matplotlib = "*"
 pydantic = "*"
 requests = "*"
-networkx = "*"
-scipy = "*"
-ipympl = "*"
-ipywidgets = "*"
-ipykernel = "*"
-streamlit = "*"
 hydralit = "*"
-sklearn = "*"
-bokeh = "==2.4.1"
+diagoriente-oplc-etl = {editable = true, path = "./../etl"}
+diagoriente-oplc = {editable = true, path = "./../model"}
 
 [dev-packages]
 mypy = "*"
-ipython = "*"
 autopep8 = "*"
 pytest = "*"
 pyright = "*"

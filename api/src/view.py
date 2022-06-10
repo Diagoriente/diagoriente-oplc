@@ -3,8 +3,8 @@
 
 from pydantic import BaseModel
 
-from oplc import core
-from oplc.model import Model
+from oplc_model import model as core
+from src.model import Model
 import numpy as np
 import networkx as nx
 

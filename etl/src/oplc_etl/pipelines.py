@@ -10,11 +10,23 @@ from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Union, Literal
-from oplc.config import (
-        DATASET_CACHE_DIR, EXPERIENCES_SKILLS_DATA_SOURCES,
-        JOBS_SKILLS_DATA_SOURCES,
-        )
-from oplc.core import ExperiencesSkills, JobsSkills
+
+DATASET_CACHE_DIR = Path("/tmp/diagoriente-oplc/cache/data_set/")
+
+EXPERIENCES_SKILLS_DATA_SOURCES = {
+    "type": "google docs",
+    "name": "Base de données proto orientation par les compétences - Expériences",
+    "key": "1PCLOHAE0yXt_tghVlV44ZTt7ZzEUV-f3COrKEMbLamc",
+    "gid": "0",
+}
+
+JOBS_SKILLS_DATA_SOURCES = {
+    "type": "google docs",
+    "name": "Base de données proto orientation par les compétences - Métiers",
+    "key": "1PCLOHAE0yXt_tghVlV44ZTt7ZzEUV-f3COrKEMbLamc",
+    "gid": "1032477800",
+}
+
 
 # There are two kinds of data pieces: the experiences_skills map and
 # jobs_skills map.
@@ -99,7 +111,7 @@ jobs_skills_data_source = data_source_from_def(
 
 # The data must conform to some prerequisites
 
-def check_data(experiences_skills: ExperiencesSkills, jobs_skills: JobsSkills) -> None:
+def check_data(experiences_skills: pa.DataFrame, jobs_skills: pa.DataFrame) -> None:
 
     # Experiences, jobs and skills must all be unique in the data sets
 
@@ -109,19 +121,19 @@ def check_data(experiences_skills: ExperiencesSkills, jobs_skills: JobsSkills) -
         res = counts.loc[counts > 1].to_list()
         return res
 
-    experiences: list[str] = experiences_skills.df.index.to_list()
+    experiences: list[str] = experiences_skills.index.to_list()
     dup = duplicate_values(experiences)
     assert len(dup) == 0, f"Found duplicated experiences in experiences_skills matrix: {dup}"
 
-    skills: list[str] = experiences_skills.df.columns.to_list()
+    skills: list[str] = experiences_skills.columns.to_list()
     dup = duplicate_values(skills)
     assert len(dup) == 0, f"Found duplicated skills in experiences_skills matrix: {dup}"
 
-    jobs: list[str] = jobs_skills.df.index.to_list()
+    jobs: list[str] = jobs_skills.index.to_list()
     dup = duplicate_values(jobs)
     assert len(dup) == 0, f"Found duplicated jobs in jobs_skills matrix: {dup}"
 
-    skills: list[str] = jobs_skills.df.columns.to_list()
+    skills: list[str] = jobs_skills.columns.to_list()
     dup = duplicate_values(skills)
     assert len(dup) == 0, f"Found duplicated skills in jobs_skills matrix: {dup}"
 
@@ -185,3 +197,18 @@ def load_local_csv(kind: DataPieceKind):
 def load_data_frame(ds: LocalCsv) -> pa.DataFrame :
     return pa.DataFrame(pa.read_csv(local_csv_path(ds.kind)))
 
+
+def experiences_skills_df(skip_if_exists: bool = True):
+    return load_data_frame(pull_source(
+            experiences_skills_data_source,
+            "experiences_skills",
+            skip_if_exists=skip_if_exists,
+            ))
+
+
+def jobs_skills_df(skip_if_exists: bool = True):
+    return load_data_frame(pull_source(
+            jobs_skills_data_source,
+            "jobs_skills",
+            skip_if_exists=skip_if_exists,
+            ))
