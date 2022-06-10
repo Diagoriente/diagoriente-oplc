@@ -9,5 +9,6 @@ scratch
 **/.venv
 **/.mypy_cache
 **/.pytest_cache
+**/*.egg-info
 
 /frontend/node_modules
