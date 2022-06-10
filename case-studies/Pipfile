@@ -7,6 +7,7 @@ name = "pypi"
 diagoriente-oplc-etl = {editable = true, path = "./../etl"}
 streamlit = "*"
 diagoriente-oplc = {editable = true, path = "./../model"}
+bokeh = "==2.4.1"
 
 [dev-packages]
 

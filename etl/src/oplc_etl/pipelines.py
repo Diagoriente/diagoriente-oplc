@@ -236,26 +236,27 @@ def skill_ids() -> list[int]:
 def experiences() -> dict[int, tuple[str, str]]:
     return {i: (exp, exp_type)
             for i, (exp, exp_type) in enumerate(
-                experiences_skills_df.loc[:, ["Expérience", "type"]].values # type:ignore
+                experiences_skills_df().loc[:, ["Expérience", "type"]].values # type:ignore
                 )
             }
 
 
 def experiences_skills() -> pa.DataFrame:
     skills_ = skills()
-    return (experiences_skills_df
+    return (experiences_skills_df()
             .loc[:, [skills_[s] for s in skill_ids()]]
             .rename(
-               columns={x.name: i for i, x in skills.items()}
+               columns={x: i for i, x in skills_.items()}
                )
             )
 
 
 def jobs_skills() -> pa.DataFrame:
-    return (jobs_skills_df
-            .loc[:, [skills[s].name for s in skill_ids]]
+    skills_ = skills()
+    return (jobs_skills_df()
+            .loc[:, [skills_[s] for s in skill_ids()]]
             .rename(
-                columns={x.name: i for i, x in skills.items()}
+                columns={x: i for i, x in skills_.items()}
                 )
             )
 

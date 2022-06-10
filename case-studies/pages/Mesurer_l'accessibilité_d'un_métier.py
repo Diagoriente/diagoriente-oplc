@@ -7,7 +7,6 @@ import streamlit as st
 from bokeh.plotting import figure, show
 from bokeh.models import ColumnDataSource
 from typing import Callable
-from scipy.spatial.distance import pdist, squareform
 from datetime import datetime
 import logging
 
@@ -39,12 +38,12 @@ st.header("Mesurer l'accessibilité d'un métier")
 #               )
 # experiences_skills = oplc.model.model.experiences_skills.df
 
-skills = etl.skills()
-jobs = etl.jobs()
-experiences = etl.experiences()
-jobs_skills = etl.jobs_skills()
-experiences_skills = etl.experiences_skills()
-skill_cooc = model.skills_cooccurrence(jobs_skills)
+skills = model.mk_skills(etl.skills())
+jobs = model.mk_jobs(etl.jobs())
+experiences = model.mk_experiences(etl.experiences())
+jobs_skills = model.mk_jobs_skills(etl.jobs_skills())
+experiences_skills = model.mk_experiences_skills(etl.experiences_skills())
+skill_cooc = model.skill_cooccurrence(jobs_skills)
 
 default_indiv_exp = [
         (1, datetime.fromisoformat("2018-06-01"), datetime.fromisoformat("2020-12-31")),
@@ -81,10 +80,10 @@ for i in range(int(indiv_exp_count)):
 
     st.subheader(f"Expérience {i+1}")
     indiv_exp.loc[i, "experience_id"] = st.selectbox(f"Intitulé",
-            experiences.index,
+            experiences.keys(),
             key=i,
             index=def_exp_id,
-            format_func=lambda x: f"{x}: ({experiences.loc[x, 'type']}) {experiences.loc[x, 'name']}",
+            format_func=lambda x: f"{x}: ({experiences[x].exp_type}) {experiences[x].name}",
             )
     (col1, col2) = st.columns(2)
 
@@ -136,7 +135,8 @@ for i in range(int(indiv_exp_count)):
 #     indiv_exp.loc[i, "job_id"] = jobs.index[jobs.name == experiences.loc[indiv_exp.loc[i, "experience_id"], "name"]][0]
 # 
 
-indiv_exp, indiv_skills = experience_weights(indiv_exp, jobs, experiences)
+indiv_exp, indiv_skills = model.experience_weights(indiv_exp, jobs, experiences,
+                                                   experiences_skills)
 
 st.header("Vous avez les compétences suivantes, de la plus importante à la moins importante")
 
@@ -167,10 +167,10 @@ metric = st.selectbox("Mesure de distance:", ["correlation", "cosine"], index=1)
 # 
 # dist_job_sorted = dist_job.sort_values()
 
-dist_job = model.job_distance(jobs_skills, indiv_skills)
+dist_job = model.job_distance(jobs_skills, indiv_skills, metric)
 
 job_access = (pa.DataFrame({
-                "Nom": [jobs.loc[i, "name"] for i in dist_job.index],
+                "Nom": [jobs[i].name for i in dist_job.index],
                 "Accessibilité": dist_job,
                 "Années d'expérience": [indiv_exp.loc[lambda x: x.job_id == i, "duration"].sum() for i in dist_job.index],
              }))
