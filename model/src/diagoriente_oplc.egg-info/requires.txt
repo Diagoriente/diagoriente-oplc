@@ -1,5 +1,0 @@
-lenses
-numpy
-pandas
-networkx
-scipy

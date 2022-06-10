@@ -1,7 +1,0 @@
-pyproject.toml
-setup.cfg
-src/diagoriente_oplc_etl.egg-info/PKG-INFO
-src/diagoriente_oplc_etl.egg-info/SOURCES.txt
-src/diagoriente_oplc_etl.egg-info/dependency_links.txt
-src/diagoriente_oplc_etl.egg-info/requires.txt
-src/diagoriente_oplc_etl.egg-info/top_level.txt
