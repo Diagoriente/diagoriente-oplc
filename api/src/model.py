@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from lenses import lens
 import oplc_model.model as core
-import oplc_etl.pipelines
+import oplc_etl.pipelines as etl
 from src import action
 
 @dataclass

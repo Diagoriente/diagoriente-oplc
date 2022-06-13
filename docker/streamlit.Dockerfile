@@ -1,13 +1,17 @@
 FROM python:3.10
 
-COPY ./Pipfile.lock /app/Pipfile.lock
-WORKDIR /app/
+COPY case-studies/Pipfile.lock /app/case-studies/Pipfile.lock
+COPY model /app/model
+COPY etl /app/etl
+WORKDIR /app/case-studies
 RUN python -m pip install --no-cache-dir --upgrade pipenv
 RUN pipenv sync
 
-COPY backend/python /app
 COPY case-studies /app/case-studies
 
 ENV PYTHONPATH "."
 
-CMD ["pipenv", "run", "streamlit", "run", "case-studies/main.py", "--server.address", "0.0.0.0", "--server.port", "8501", "--server.baseUrlPath", "case-studies"]
+ENV STREAMLIT_HOST="0.0.0.0"
+ENV STREAMLIT_PORT="8501"
+
+CMD ./up.sh

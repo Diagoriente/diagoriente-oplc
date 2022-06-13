@@ -13,7 +13,7 @@ mkdir -p $TMPDIR/docker_images/$VERSION
 echo "Saving docker images to $DOCKER_IMAGE_LOCAL"
 docker save \
     $COMPOSE_PROJECT_NAME/frontend:$VERSION \
-    $COMPOSE_PROJECT_NAME/backend:$VERSION \
+    $COMPOSE_PROJECT_NAME/api:$VERSION \
     $COMPOSE_PROJECT_NAME/streamlit:$VERSION \
     -o $DOCKER_IMAGE_LOCAL
 
