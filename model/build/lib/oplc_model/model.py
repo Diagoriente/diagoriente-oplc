@@ -4,6 +4,7 @@
 from dataclasses import dataclass
 from typing import Iterable, Tuple, Optional, Callable, NewType
 import pandas as pa
+from scipy.spatial.distance import pdist, squareform
 import numpy as np
 import numpy.typing as npt
 import networkx as nx
@@ -332,7 +333,7 @@ def experience_weights(
         exp_weight.loc[i, "duration"] = sum(year_proportion)
         exp_weight.loc[i, "rencency"] = year_recency[-1]
         exp_weight.loc[i, "weight"] = experience_weight
-        exp_weight.loc[i, "job_id"] = job_id_by_name(experiences[i].name)
+        exp_weight.loc[i, "job_id"] = job_id_by_name(jobs, experiences[i].name)
 
 
     # Multiply each experience skill (row) vector by the corresponding
@@ -354,14 +355,15 @@ JobDistance = NewType("JobDistance", pa.DataFrame)
 def job_distance(
         jobs_skills: JobsSkills,
         indiv_skills: IndivSkills,
+        metric: str,
         ) -> JobDistance:
-    dist_job = pa.Series(np.empty(jobs_skills.shape[0]),
-                          index=jobs_skills.index,
+    dist_job = pa.Series(np.empty(jobs_skills.df.shape[0]),
+                          index=jobs_skills.df.index,
                          )
 
-    for j in jobs_skills.index:
-        dist_job.loc[j] = pdist([indiv_skills.loc[jobs_skills.columns].weight,
-                                 jobs_skills.loc[j, :],
+    for j in jobs_skills.df.index:
+        dist_job.loc[j] = pdist([indiv_skills.loc[jobs_skills.df.columns].weight,
+                                 jobs_skills.df.loc[j, :],
                                  ],
                                  metric=metric)
 

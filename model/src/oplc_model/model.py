@@ -301,6 +301,10 @@ def experience_weights(
         "experience_id": indiv_exp.loc[:, "experience_id"],
         "begin": indiv_exp.loc[:, "begin"],
         "end": indiv_exp.loc[:, "end"],
+        "duration": np.empty(len(indiv_exp), dtype=float),
+        "recency": np.empty(len(indiv_exp), dtype=float),
+        "weight": np.empty(len(indiv_exp), dtype=float),
+        "job_id": np.empty(len(indiv_exp), dtype=int),
         })
 
     today = datetime.today()
@@ -333,7 +337,10 @@ def experience_weights(
         exp_weight.loc[i, "duration"] = sum(year_proportion)
         exp_weight.loc[i, "rencency"] = year_recency[-1]
         exp_weight.loc[i, "weight"] = experience_weight
-        exp_weight.loc[i, "job_id"] = job_id_by_name(jobs, experiences[i].name)
+        exp_weight.loc[i, "job_id"] = job_id_by_name(
+                jobs,
+                experiences[exp_weight.loc[i, "experience_id"]].name
+        )
 
 
     # Multiply each experience skill (row) vector by the corresponding
