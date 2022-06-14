@@ -34,14 +34,9 @@ indiv_exp_count = st.number_input(
         value=len(default_indiv_exp))
 
 with st.form(key="Vos expériences"):
-    indiv_exp = pa.DataFrame({
-        "job_id": np.empty(int(indiv_exp_count), dtype=int),
-        "begin": np.empty(int(indiv_exp_count), dtype=datetime),
-        "end": np.empty(int(indiv_exp_count), dtype=datetime),
-        "duration": np.empty(int(indiv_exp_count), dtype=float),
-        "recency": np.empty(int(indiv_exp_count), dtype=float),
-        "weight": np.empty(int(indiv_exp_count), dtype=float),
-        })
+    job_id = np.empty(int(indiv_exp_count), dtype=int)
+    begin = np.empty(int(indiv_exp_count), dtype=datetime)
+    end = np.empty(int(indiv_exp_count), dtype=datetime)
 
 
     for i in range(int(indiv_exp_count)):
@@ -54,7 +49,7 @@ with st.form(key="Vos expériences"):
             def_end = None
 
         st.subheader(f"Expérience {i+1}")
-        indiv_exp.loc[i, "job_id"] = st.selectbox(f"Intitulé",
+        job_id[i] = st.selectbox(f"Intitulé",
                 jobs.keys(),
                 key=i,
                 index=def_job_id,
@@ -63,14 +58,14 @@ with st.form(key="Vos expériences"):
         (col1, col2) = st.columns(2)
 
         with col1:
-            indiv_exp.loc[i, "begin"] = st.date_input(
+            begin[i] = st.date_input(
                     "Date de début",
                     key=i,
                     value=def_begin
                     )
 
         with col2:
-            indiv_exp.loc[i, "end"] = st.date_input(
+            end[i] = st.date_input(
                     "Date de fin",
                     key=i,
                     value=def_end
@@ -78,8 +73,13 @@ with st.form(key="Vos expériences"):
 
     st.form_submit_button("Obtenir des recommandations")
 
+indiv_exp = model.mk_individual_experiences(job_id, begin, end)
 
-indiv_exp, indiv_skills = model.experience_weights(indiv_exp, jobs_skills)
+metric = st.selectbox("Mesure de distance:", ["correlation", "cosine"], index=1)
+
+experience_weights, indiv_skills, job_dist = (
+        model.job_accessibility_from_experiences(indiv_exp, jobs_skills, metric)
+)
 
 st.header("Vous avez les compétences suivantes, de la plus importante à la moins importante")
 
@@ -96,14 +96,12 @@ st.table(pa.DataFrame({
 st.header("Métiers du plus accessible au moins accessible")
 
 
-metric = st.selectbox("Mesure de distance:", ["correlation", "cosine"], index=1)
-
 dist_job = model.job_distance(jobs_skills, indiv_skills, metric)
 
 job_access = (pa.DataFrame({
                 "Nom": [jobs[i].name for i in dist_job.index],
                 "Accessibilité": dist_job,
-                "Années d'expérience": [indiv_exp.loc[lambda x: x.job_id == i, "duration"].sum() for i in dist_job.index],
+                "Années d'expérience": [experience_weights.loc[lambda x: x.job_id == i, "duration"].sum() for i in dist_job.index],
              }))
 
 hide_practiced_jobs = st.checkbox("Cacher les métiers déjà exercés", value = True)

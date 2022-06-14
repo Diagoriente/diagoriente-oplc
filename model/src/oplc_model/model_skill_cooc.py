@@ -56,12 +56,24 @@ def skill_cooccurrence(jobs_skills: JobsSkills) -> "SkillCooccurrence":
     return skills_jobs.dot(skills_jobs.transpose())
 
 
+IndividualExperiences = NewType("IndividualExperiences", pa.DataFrame)
 ExperienceWeights = NewType("ExperienceWeights", pa.DataFrame)
 IndivSkills = NewType("IndivSkills", pa.DataFrame)
 
+def mk_individual_experiences(
+        job_id: npt.NDArray[JobId],
+        begin: npt.NDArray[float],
+        end: npt.NDArray[float],
+        ) -> IndividualExperiences:
+    return IndividualExperiences(pa.DataFrame({
+        "job_id": job_id,
+        "begin": begin,
+        "end": end,
+        }))
+
 
 def experience_weights(
-        indiv_exp: pa.DataFrame,
+        indiv_exp: IndividualExperiences,
         jobs_skills: JobsSkills,
         ) -> tuple[ExperienceWeights, IndivSkills]:
 
@@ -138,3 +150,19 @@ def job_distance(
                                  metric=metric)
 
     return JobDistance(dist_job.sort_values())
+
+
+def job_accessibility_from_experiences(
+        indiv_exp: IndividualExperiences,
+        jobs_skills: JobsSkills,
+        metric: str,
+        ) -> tuple[ExperienceWeights, IndivSkills, JobDistance]:
+
+    exp_w, indiv_skills = experience_weights(
+        indiv_exp=indiv_exp,
+        jobs_skills=jobs_skills,
+    )
+
+    job_dist = job_distance(jobs_skills, indiv_skills, metric)
+
+    return exp_w, indiv_skills, job_dist
