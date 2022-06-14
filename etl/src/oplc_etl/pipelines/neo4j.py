@@ -21,7 +21,6 @@ def driver(uri=neo4jURI,
 def get_job_skill_data(driver):
     jobs = {}
     skills = {}
-    experiences = {}
     edges = []
 
     with driver.session() as session:
@@ -29,15 +28,7 @@ def get_job_skill_data(driver):
         for (job_id, job_title, job_rome),(skill_id, skill_title) in result:
             jobs[job_id] = job_title
             skills[skill_id] = skill_title
-            #TODO: qu'est-ce qu'on fait du type d'expérience ?
-            experiences[job_id] = (job_title, "pro")
             edges.append((job_id, skill_id))
-
-    experiences_skills = pa.DataFrame(
-            np.zeros((len(experiences), len(skills)), dtype=int),
-            columns=skills.keys(),
-            index=experiences.keys(),
-            )
 
     jobs_skills = pa.DataFrame(
             np.zeros((len(jobs), len(skills)), dtype=int),
@@ -46,10 +37,9 @@ def get_job_skill_data(driver):
             )
 
     for (j,s) in edges:
-        experiences_skills.loc[j, s] = 1
         jobs_skills.loc[j, s] = 1
 
-    return jobs, skills, experiences, experiences_skills, jobs_skills
+    return jobs, skills, jobs_skills
 
 
 def _get_job_skill_graph(tx):
@@ -67,7 +57,9 @@ def _get_job_skill_graph(tx):
 
 
 def get_data():
-    global driver
+    result = None
 
-    with driver() as driver:
-        return get_job_skill_data(driver)
+    with driver() as d:
+        result = get_job_skill_data(d)
+
+    return result
