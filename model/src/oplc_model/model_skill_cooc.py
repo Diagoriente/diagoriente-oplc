@@ -114,7 +114,7 @@ def experience_weights(
         experience_weight = sum(year_weight)
 
         exp_weight.loc[i, "duration"] = sum(year_proportion)
-        exp_weight.loc[i, "rencency"] = year_recency[-1]
+        exp_weight.loc[i, "recency"] = year_recency[-1]
         exp_weight.loc[i, "weight"] = experience_weight
 
 
@@ -131,38 +131,48 @@ def experience_weights(
     return ExperienceWeights(exp_weight), IndivSkills(indiv_skills)
 
 
-JobDistance = NewType("JobDistance", pa.DataFrame)
+JobAccessibility = NewType("JobAccessibility", pa.DataFrame)
+SkillContribution = NewType("SkillContribution", pa.DataFrame)
 
 
-def job_distance(
+def job_accessibility(
         jobs_skills: JobsSkills,
         indiv_skills: IndivSkills,
-        metric: str,
-        ) -> JobDistance:
-    dist_job = pa.Series(np.empty(jobs_skills.df.shape[0]),
-                          index=jobs_skills.df.index,
-                         )
+        ) -> JobAccessibility:
 
-    for j in jobs_skills.df.index:
-        dist_job.loc[j] = pdist([indiv_skills.loc[jobs_skills.df.columns].weight,
-                                 jobs_skills.df.loc[j, :],
-                                 ],
-                                 metric=metric)
+    norm_job = np.sqrt((jobs_skills.df ** 2).sum(axis=1))
+    norm_indiv = np.sqrt((indiv_skills.weight ** 2).sum())
 
-    return JobDistance(dist_job.sort_values())
+    skill_contribution = (
+            jobs_skills.df
+            .mul(indiv_skills.weight, axis="columns")
+            .div(norm_job * norm_indiv, axis="index")
+            )
+
+    job_access = skill_contribution.sum(axis=1)
+    job_access = job_access.sort_values(ascending=False)
+
+    skill_contribution_normalized = (
+            skill_contribution.div(skill_contribution.sum(axis=1), axis="index")
+            )
+    skill_contribution_normalized.loc[job_access.index, :]
+
+    scaled_skill = indiv_skills.weight / indiv_skills.weight.max()
+    skill_gap = (jobs_skills.df - scaled_skill) * jobs_skills.df
+
+    return job_access, skill_contribution_normalized, skill_gap
 
 
 def job_accessibility_from_experiences(
         indiv_exp: IndividualExperiences,
         jobs_skills: JobsSkills,
-        metric: str,
-        ) -> tuple[ExperienceWeights, IndivSkills, JobDistance]:
+        ) -> tuple[ExperienceWeights, IndivSkills, JobAccessibility, SkillContribution]:
 
     exp_w, indiv_skills = experience_weights(
         indiv_exp=indiv_exp,
         jobs_skills=jobs_skills,
     )
 
-    job_dist = job_distance(jobs_skills, indiv_skills, metric)
+    job_access, skill_contrib, skill_gap = job_accessibility(jobs_skills, indiv_skills)
 
-    return exp_w, indiv_skills, job_dist
+    return exp_w, indiv_skills, job_access, skill_contrib, skill_gap

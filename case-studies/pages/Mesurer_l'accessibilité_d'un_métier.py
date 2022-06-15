@@ -75,39 +75,69 @@ with st.form(key="Vos expériences"):
 
 indiv_exp = model.mk_individual_experiences(job_id, begin, end)
 
-metric = st.selectbox("Mesure de distance:", ["correlation", "cosine"], index=1)
-
-experience_weights, indiv_skills, job_dist = (
-        model.job_accessibility_from_experiences(indiv_exp, jobs_skills, metric)
+experience_weights, indiv_skills, dist_job, skill_contrib, skill_gap = (
+        model.job_accessibility_from_experiences(
+            indiv_exp,
+            jobs_skills,
+        )
 )
 
-st.header("Vous avez les compétences suivantes, de la plus importante à la moins importante")
 
 indiv_skills_nonzero = (indiv_skills.loc[indiv_skills.weight > 0, :]
                        .sort_values(by="weight", ascending=False)
                        )
 
-st.table(pa.DataFrame({
-     "Nom": [skills[i].name for i in indiv_skills_nonzero.index],
-     "Importance de la compétence": indiv_skills_nonzero.weight,
-     }))
+
+with st.expander("Expériences (détails)"):
+    st.table(
+            experience_weights
+            .assign(Nom=[jobs[i].name for i in experience_weights.job_id])
+            .rename(columns={
+                "begin": "Début",
+                "end": "Fin",
+                "duration": "Durée (années)",
+                "recency": "Récence (années)",
+                "weight": "Importance",
+                })
+            .loc[:, ["Nom", "Début", "Fin", "Durée (années)", "Récence (années)", "Importance"]]
+    )
+
+
+with st.expander("Compétences (détails)"):
+    st.table(
+            indiv_skills_nonzero
+            .assign(Nom=[skills[i].name for i in indiv_skills_nonzero.index])
+            .rename(columns={"weight": "Importance"})
+            .loc[:, ["Nom", "Importance"]]
+    )
 
 
 st.header("Métiers du plus accessible au moins accessible")
 
+st.info("""
+Pour qu'un métier ait une correspondance de 1, il faut que la personne ait développé toutes les compétences demandées par le métier de manière égale. Si elle a aussi développé d'autres compétences ou si elle a développé ses compétences de manière inégale, la correspondante diminue.
+""")
 
-dist_job = model.job_distance(jobs_skills, indiv_skills, metric)
+n_recommended_jobs = st.slider("Combien de métiers afficher ?", 1, len(dist_job), value=20)
 
-job_access = (pa.DataFrame({
-                "Nom": [jobs[i].name for i in dist_job.index],
-                "Accessibilité": dist_job,
-                "Années d'expérience": [experience_weights.loc[lambda x: x.job_id == i, "duration"].sum() for i in dist_job.index],
-             }))
+most_accessible_jobs = dist_job.head(n_recommended_jobs).index
 
 hide_practiced_jobs = st.checkbox("Cacher les métiers déjà exercés", value = True)
 
 if hide_practiced_jobs:
-    job_access = job_access.loc[
-            lambda x: x.loc[:, "Années d'expérience"] == 0
-            ]
-st.table(job_access.head(30))
+    most_accessible_jobs = most_accessible_jobs.drop(indiv_exp.job_id)
+
+job_list_markdown = ""
+
+for j in most_accessible_jobs:
+
+    job_list_markdown += f"- **{jobs[j].name}** (correspondance: {dist_job.loc[j]:.2f})\n"
+
+    job_list_markdown += f"    - En raison de votre expériences pour :\n"
+    for s in skill_contrib.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
+        job_list_markdown += f"       - {skills[s].name} (contribution: {skill_contrib.loc[j, s] * 100:.0f}%)\n"
+
+    job_list_markdown += f"    - Vous devrez d'avantage développer les compétences suivantes :\n"
+    for s in skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
+        job_list_markdown += f"       - {skills[s].name} (gap: {skill_gap.loc[j, s] * 100:.0f}%)\n"
+st.write(job_list_markdown)

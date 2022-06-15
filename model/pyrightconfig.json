@@ -1,0 +1,9 @@
+{
+    "include": ["src"],
+    "exclude": [
+        "**/__pycache__"
+    ],
+    "typeCheckingMode": "strict",
+    "extraPaths": [],
+    "venv": "model-CJutpJ48"
+}
