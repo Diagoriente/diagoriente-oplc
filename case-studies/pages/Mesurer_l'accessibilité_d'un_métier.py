@@ -115,10 +115,10 @@ with st.expander("Compétences (détails)"):
 st.header("Métiers du plus accessible au moins accessible")
 
 st.info("""
-Pour qu'un métier ait une correspondance de 1, il faut que la personne ait développé toutes les compétences demandées par le métier de manière égale. Si elle a aussi développé d'autres compétences ou si elle a développé ses compétences de manière inégale, la correspondante diminue.
+Pour qu'un métier ait une accessibilité de 1, il faut que la personne ait développé toutes les compétences demandées par le métier de manière égale. Si elle a aussi développé d'autres compétences ou si elle a développé ses compétences de manière inégale, la accessibilité diminue.
 """)
 
-n_recommended_jobs = st.slider("Combien de métiers afficher ?", 1, len(dist_job), value=20)
+n_recommended_jobs = st.slider("Combien de métiers afficher ?", 1, len(dist_job), value=10)
 
 most_accessible_jobs = dist_job.head(n_recommended_jobs).index
 
@@ -131,13 +131,17 @@ job_list_markdown = ""
 
 for j in most_accessible_jobs:
 
-    job_list_markdown += f"- **{jobs[j].name}** (correspondance: {dist_job.loc[j]:.2f})\n"
+    job_list_markdown += f"- **{jobs[j].name}** (accessibilité: {dist_job.loc[j]:.2f})\n"
 
     job_list_markdown += f"    - En raison de votre expériences pour :\n"
     for s in skill_contrib.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
-        job_list_markdown += f"       - {skills[s].name} (contribution: {skill_contrib.loc[j, s] * 100:.0f}%)\n"
+        job_list_markdown += f"       - *{skills[s].name}* (contribution: {skill_contrib.loc[j, s] * 100:.0f}%)\n"
 
-    job_list_markdown += f"    - Vous devrez d'avantage développer les compétences suivantes :\n"
-    for s in skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
-        job_list_markdown += f"       - {skills[s].name} (gap: {skill_gap.loc[j, s] * 100:.0f}%)\n"
+    job_list_markdown += f"    - Vous devrez développer les compétences suivantes :\n"
+    for s in skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x >= 1.0].index:
+        sa, scontrib = model.skill_accessibility(skill_cooc, indiv_skills)
+        job_list_markdown += f"       - *{skills[s].name}* (accessibilité: {sa.loc[s] * 100:.0f}% car vous savez déjà "
+        for sc in scontrib.loc[s,:].sort_values(ascending=False).loc[lambda x: x > 0].index:
+            job_list_markdown += f"*{skills[sc].name}*; "
+        job_list_markdown += ")\n"
 st.write(job_list_markdown)

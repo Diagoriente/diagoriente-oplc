@@ -43,9 +43,7 @@ def mk_jobs_skills(df: pa.DataFrame) -> JobsSkills:
     return JobsSkills(df=df)
 
 
-@dataclass(frozen=True)
-class SkillCooccurrence:
-    df: pa.DataFrame
+SkillCooccurrence = NewType("SkillCooccurrence", pa.DataFrame)
 
 
 def skill_cooccurrence(jobs_skills: JobsSkills) -> "SkillCooccurrence":
@@ -53,7 +51,7 @@ def skill_cooccurrence(jobs_skills: JobsSkills) -> "SkillCooccurrence":
     # Remove skills that are not associated to any job
     # skills_jobs = skills_jobs.loc[skills_jobs.sum(axis=1) > 0, :]
 
-    return skills_jobs.dot(skills_jobs.transpose())
+    return SkillCooccurrence(skills_jobs.dot(skills_jobs.transpose()))
 
 
 IndividualExperiences = NewType("IndividualExperiences", pa.DataFrame)
@@ -161,6 +159,45 @@ def job_accessibility(
     skill_gap = (jobs_skills.df - scaled_skill) * jobs_skills.df
 
     return job_access, skill_contribution_normalized, skill_gap
+
+
+SkillAccessibility = NewType("SkillAccessibility", pa.DataFrame)
+
+
+def skill_accessibility(
+        skill_cooc: SkillCooccurrence,
+        indiv_skills: IndivSkills,
+        ) -> SkillAccessibility:
+
+    mask = pa.DataFrame(np.ones(skill_cooc.shape),
+                        index=skill_cooc.index,
+                        columns=skill_cooc.columns)
+    for i,j in zip(skill_cooc.index, skill_cooc.index):
+        mask.loc[i,j] = 0
+
+    skill_cooc = skill_cooc * mask
+
+    norm_skill = np.sqrt((skill_cooc ** 2).sum(axis=1))
+    norm_indiv = np.sqrt((indiv_skills.weight ** 2).sum())
+
+    skill_contribution = (
+            skill_cooc
+            .mul(indiv_skills.weight, axis="columns")
+            .div(norm_skill * norm_indiv, axis="index")
+            )
+
+    skill_access = skill_contribution.sum(axis=1)
+    skill_access = skill_access.sort_values(ascending=False)
+
+    skill_contribution_normalized = (
+            skill_contribution.div(skill_contribution.sum(axis=1), axis="index")
+            )
+    skill_contribution_normalized.loc[skill_access.index, :]
+
+    scaled_skill = indiv_skills.weight / indiv_skills.weight.max()
+    skill_gap = (skill_cooc - scaled_skill) * skill_cooc
+
+    return skill_access, skill_contribution_normalized
 
 
 def job_accessibility_from_experiences(
