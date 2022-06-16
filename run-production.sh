@@ -6,4 +6,4 @@ latest_release=$(ssh ovh-vps-test "find Diagoriente-Oplc/releases/ -mindepth 1 -
 
 echo "Run latest release $latest_release"
 
-ssh ovh-vps-test "cd $latest_release; set -a; . .version; set +a; docker-compose up --no-build -d"
+ssh ovh-vps-test "cd $latest_release; set -a; . .env; . .version; set +a; docker-compose up --no-build -d"

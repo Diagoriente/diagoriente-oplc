@@ -14,6 +14,11 @@ logging.getLogger().setLevel(logging.INFO)
 
 st.header("Mesurer l'accessibilité d'un métier")
 
+st.write("""
+        Entrez vos expériences professionnelles ci-dessous pour connaître
+        d'autres métiers qui correspondent à vos compétences.
+""")
+
 _jobs, _skills, _jobs_skills = etl.get_data()
 
 skills = model.mk_skills(_skills)
@@ -114,33 +119,45 @@ with st.expander("Compétences (détails)"):
 
 st.header("Métiers du plus accessible au moins accessible")
 
-st.info("""
-Pour qu'un métier ait une accessibilité de 1, il faut que la personne ait développé toutes les compétences demandées par le métier de manière égale. Si elle a aussi développé d'autres compétences ou si elle a développé ses compétences de manière inégale, la accessibilité diminue.
-""")
+with st.expander("Que signifie l'accessibilité d'un métier ?"):
+    st.write("""
+        L'accessibilité d'un métier est égale à 1 quand vous avez développé les compétences qu'il nécessite de manière égale et que vous n'avez développé aucune autre compétence. Ceci nous permet de vous proposer d'abord des métiers qui vous permettront d'exercer le plus grand nombre possible de vos compétences et seulement ensuite les métiers qui n'exploiteront qu'une partie de vos compétences.
 
-n_recommended_jobs = st.slider("Combien de métiers afficher ?", 1, len(dist_job), value=10)
+        Au contraire, l'accessibilité vaut 0 lorsque vous n'avez aucune compétence en commun avec celles demandées pour le métier.
+        """)
 
-most_accessible_jobs = dist_job.head(n_recommended_jobs).index
+with st.expander("Que signifie l'accessibilité d'une compétence ?"):
+    st.write("""
+        L'accessibilité d'une compétence traduit la facilité avec laquelle vous devriez pouvoir l'acquérir. Elle vaut 0 pour les compétences difficiles et 1 pour les compétences faciles.
+
+        Elle dépend des compétences qui sont exercées conjointement avec la compétence considérée. Par exemple, la compétence "Observer, visualiser, s'orienter" est exercée conjointement à "Aménager, entretenir un espace naturel" dans 4 métiers: Sylviculteur / Sylvicultrice, Aménagement et entretien des espaces verts, Bûcheronnage et élagage et Entretien des espaces naturels. Nous faisons l'hypothèse que si vous matriser l'une, l'autre devrait être plus facile à acquérir.
+            """)
+
+most_accessible_jobs = dist_job.index
 
 hide_practiced_jobs = st.checkbox("Cacher les métiers déjà exercés", value = True)
 
 if hide_practiced_jobs:
     most_accessible_jobs = most_accessible_jobs.drop(indiv_exp.job_id)
 
+n_recommended_jobs = st.number_input("Combien de métiers afficher ?", 1, 30, value=10, step=5)
+
+most_accessible_jobs = most_accessible_jobs[:int(n_recommended_jobs)]
+
 job_list_markdown = ""
 
 for j in most_accessible_jobs:
 
-    job_list_markdown += f"- **{jobs[j].name}** (accessibilité: {dist_job.loc[j]:.2f})\n"
+    job_list_markdown += f"1. **{jobs[j].name}** (accessibilité du métier: {dist_job.loc[j]:.2f})\n"
 
-    job_list_markdown += f"    - En raison de votre expériences pour :\n"
+    job_list_markdown += f"    - En raison de votre expérience pour :\n"
     for s in skill_contrib.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
-        job_list_markdown += f"       - *{skills[s].name}* (contribution: {skill_contrib.loc[j, s] * 100:.0f}%)\n"
+        job_list_markdown += f"       - *{skills[s].name}*\n"
 
     job_list_markdown += f"    - Vous devrez développer les compétences suivantes :\n"
     for s in skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x >= 1.0].index:
         sa, scontrib = model.skill_accessibility(skill_cooc, indiv_skills)
-        job_list_markdown += f"       - *{skills[s].name}* (accessibilité: {sa.loc[s] * 100:.0f}% car vous savez déjà "
+        job_list_markdown += f"       - *{skills[s].name}* (accessibilité de la compténce: {sa.loc[s]:.2f} car vous savez déjà "
         for sc in scontrib.loc[s,:].sort_values(ascending=False).loc[lambda x: x > 0].index:
             job_list_markdown += f"*{skills[sc].name}*; "
         job_list_markdown += ")\n"
