@@ -44,7 +44,7 @@ def get_job_skill_data(driver):
 
 def _get_job_skill_graph(tx):
     query = (
-        "MATCH (j:Job)-[r:HasCompetency]-(c:Competences) "
+        "MATCH (j:Sous_Domaine)-[r:HasCompetence]-(c:Competence) "
         "RETURN j,c"
     )
     result = tx.run(query)
