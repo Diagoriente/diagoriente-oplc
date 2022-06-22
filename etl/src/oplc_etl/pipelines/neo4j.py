@@ -55,7 +55,7 @@ def get_job_skill_data(driver):
 
         result_sectors = session.read_transaction(_get_sectors_data)
         for (sector_id, sector_title, sector_rome) in result_sectors:
-            sectors[sector_id] = {"sector": sector_id, "title": sector_title, "rome": sector_rome}
+            sectors[sector_id] = {"sector": sector_id, "title": sector_title, "ROME": sector_rome}
 
         result_job_skill = session.read_transaction(_get_job_skill_graph)
         for (job_id, skill_id) in result_job_skill:

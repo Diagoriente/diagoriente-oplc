@@ -28,9 +28,9 @@ jobs_skills = model.mk_jobs_skills(data.jobs_skills)
 skill_cooc = model.skill_cooccurrence(jobs_skills)
 
 default_indiv_exp = [
-        (1, datetime.fromisoformat("2018-06-01"), datetime.fromisoformat("2020-12-31")),
-        (2, datetime.fromisoformat("2020-01-01"), datetime.fromisoformat("2021-12-31")),
-        (3, datetime.fromisoformat("2022-01-01"), datetime.fromisoformat("2022-05-31")),
+        (124, datetime.fromisoformat("2018-06-01"), datetime.fromisoformat("2020-12-31")),
+        (125, datetime.fromisoformat("2020-01-01"), datetime.fromisoformat("2021-12-31")),
+        (126, datetime.fromisoformat("2022-01-01"), datetime.fromisoformat("2022-05-31")),
         ]
 
 indiv_exp_count = st.number_input(
@@ -58,7 +58,7 @@ with st.form(key="Vos expériences"):
         job_id[i] = st.selectbox(f"Intitulé",
                 jobs.index,
                 key=i,
-                index=def_job_id,
+                index=jobs.index.tolist().index(def_job_id),
                 format_func=lambda x: f"{x}: ({jobs.loc[x, 'ROME']}) {jobs.loc[x, 'title']}",
                 )
         (col1, col2) = st.columns(2)
@@ -87,7 +87,6 @@ experience_weights, indiv_skills, dist_job, skill_contrib, skill_gap = (
             jobs_skills,
         )
 )
-
 
 indiv_skills_nonzero = (indiv_skills.loc[indiv_skills.weight > 0, :]
                        .sort_values(by="weight", ascending=False)
@@ -134,20 +133,43 @@ with st.expander("Que signifie l'accessibilité d'une compétence ?"):
         Elle dépend des compétences qui sont exercées conjointement avec la compétence considérée. Par exemple, la compétence "Observer, visualiser, s'orienter" est exercée conjointement à "Aménager, entretenir un espace naturel" dans 4 métiers: Sylviculteur / Sylvicultrice, Aménagement et entretien des espaces verts, Bûcheronnage et élagage et Entretien des espaces naturels. Nous faisons l'hypothèse que si vous matriser l'une, l'autre devrait être plus facile à acquérir.
             """)
 
-most_accessible_jobs = dist_job.index
+indiv_main_sector = jobs.loc[
+        experience_weights.loc[lambda x: x.weight.idxmax(), "job_id"],
+        "sector"
+        ]
+
+most_accessible_jobs = dist_job.sort_values(ascending=False)
+
 
 hide_practiced_jobs = st.checkbox("Cacher les métiers déjà exercés", value = True)
 
 if hide_practiced_jobs:
     most_accessible_jobs = most_accessible_jobs.drop(indiv_exp.job_id)
 
+
+indiv_sector = st.selectbox(f"Votre secteur d'activité principal est :",
+                sectors.index,
+                key="indiv_sector",
+                index=sectors.index.tolist().index(indiv_main_sector),
+                format_func=lambda x: f"{x}: ({sectors.loc[x, 'ROME']}) {sectors.loc[x, 'title']}",
+                )
+
+same_sector_first = st.checkbox("Montrer d'abord les métiers du même secteur d'activité", value = True)
+
+if same_sector_first:
+    select_same_sector = jobs.sector == indiv_sector
+    same_sector_jobs = most_accessible_jobs.loc[select_same_sector].sort_values(ascending=False)
+    other_sectors_jobs = most_accessible_jobs.loc[~select_same_sector].sort_values(ascending=False)
+    most_accessible_jobs = pa.concat([same_sector_jobs, other_sectors_jobs])
+
+
 n_recommended_jobs = st.number_input("Combien de métiers afficher ?", 1, 30, value=10, step=5)
 
-most_accessible_jobs = most_accessible_jobs[:int(n_recommended_jobs)]
+most_accessible_jobs = most_accessible_jobs.head(n_recommended_jobs)
 
 job_list_markdown = ""
 
-for j in most_accessible_jobs:
+for j in most_accessible_jobs.index:
 
     job_list_markdown += f"1. **{jobs.loc[j, 'title']}** (accessibilité du métier: {dist_job.loc[j]:.2f})\n"
 
