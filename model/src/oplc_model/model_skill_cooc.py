@@ -9,45 +9,43 @@ from lenses import lens
 from math import floor, sqrt
 from datetime import datetime
 
-SkillId = int
 
-@dataclass(frozen=True)
-class Skill:
-    id: SkillId
-    name: str
+Skills = NewType("Skills", pa.DataFrame)
 
 
-def mk_skills(skills: dict[int, str]) -> dict[int, Skill]:
-    return {i: Skill(id=i, name=n) for i, n in skills.items()}
+def mk_skills(skills: pa.DataFrame) -> Skills:
+    # We're just wrapping the dataframe in a newtype, but ideally we would check
+    # the DataFrame column types if the pandas DataFrame type allowed
+    # typechecking
+    return Skills(skills)
 
 
-JobId = int
+Jobs = NewType("Jobs", pa.DataFrame)
 
 
-@dataclass
-class Job:
-    id: JobId
-    name: str
+def mk_jobs(jobs: pa.DataFrame) -> Jobs:
+    return Jobs(jobs)
 
 
-def mk_jobs(jobs: dict[int, str]) -> dict[int, Job]:
-    return {i: Job(id=i, name=n) for i, n in jobs.items()}
+Sectors = NewType("Sectors", pa.DataFrame)
 
 
-@dataclass(frozen=True)
-class JobsSkills:
-    df: pa.DataFrame
+def mk_sectors(sectors: pa.DataFrame) -> Sectors:
+    return Sectors(sectors)
+
+
+JobsSkills = NewType("JobsSkills", pa.DataFrame)
 
 
 def mk_jobs_skills(df: pa.DataFrame) -> JobsSkills:
-    return JobsSkills(df=df)
+    return JobsSkills(df)
 
 
 SkillCooccurrence = NewType("SkillCooccurrence", pa.DataFrame)
 
 
 def skill_cooccurrence(jobs_skills: JobsSkills) -> "SkillCooccurrence":
-    skills_jobs = jobs_skills.df.transpose()
+    skills_jobs = jobs_skills.transpose()
     # Remove skills that are not associated to any job
     # skills_jobs = skills_jobs.loc[skills_jobs.sum(axis=1) > 0, :]
 
@@ -59,7 +57,7 @@ ExperienceWeights = NewType("ExperienceWeights", pa.DataFrame)
 IndivSkills = NewType("IndivSkills", pa.DataFrame)
 
 def mk_individual_experiences(
-        job_id: npt.NDArray[JobId],
+        job_id: npt.NDArray[int],
         begin: npt.NDArray[float],
         end: npt.NDArray[float],
         ) -> IndividualExperiences:
@@ -119,7 +117,7 @@ def experience_weights(
     # Multiply each experience skill (row) vector by the corresponding
     # experience weight and sum the results
     indiv_skills = pa.DataFrame({
-        "weight": (jobs_skills.df.loc[exp_weight.job_id, :]
+        "weight": (jobs_skills.loc[exp_weight.job_id, :]
                   .set_index(exp_weight.index)
                   .mul(exp_weight.weight, axis="index")
                   .sum()
@@ -138,11 +136,11 @@ def job_accessibility(
         indiv_skills: IndivSkills,
         ) -> JobAccessibility:
 
-    norm_job = np.sqrt((jobs_skills.df ** 2).sum(axis=1))
+    norm_job = np.sqrt((jobs_skills ** 2).sum(axis=1))
     norm_indiv = np.sqrt((indiv_skills.weight ** 2).sum())
 
     skill_contribution = (
-            jobs_skills.df
+            jobs_skills
             .mul(indiv_skills.weight, axis="columns")
             .div(norm_job * norm_indiv, axis="index")
             )
@@ -156,7 +154,7 @@ def job_accessibility(
     skill_contribution_normalized.loc[job_access.index, :]
 
     scaled_skill = indiv_skills.weight / indiv_skills.weight.max()
-    skill_gap = (jobs_skills.df - scaled_skill) * jobs_skills.df
+    skill_gap = (jobs_skills - scaled_skill) * jobs_skills
 
     return job_access, skill_contribution_normalized, skill_gap
 

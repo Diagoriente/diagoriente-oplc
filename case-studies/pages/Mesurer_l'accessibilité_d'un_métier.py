@@ -19,11 +19,12 @@ st.write("""
         d'autres métiers qui correspondent à vos compétences.
 """)
 
-_jobs, _skills, _jobs_skills = etl.get_data()
+data = etl.get_data()
 
-skills = model.mk_skills(_skills)
-jobs = model.mk_jobs(_jobs)
-jobs_skills = model.mk_jobs_skills(_jobs_skills)
+skills = model.mk_skills(data.skills)
+jobs = model.mk_jobs(data.jobs)
+sectors = model.mk_sectors(data.sectors)
+jobs_skills = model.mk_jobs_skills(data.jobs_skills)
 skill_cooc = model.skill_cooccurrence(jobs_skills)
 
 default_indiv_exp = [
@@ -55,10 +56,10 @@ with st.form(key="Vos expériences"):
 
         st.subheader(f"Expérience {i+1}")
         job_id[i] = st.selectbox(f"Intitulé",
-                jobs.keys(),
+                jobs.index,
                 key=i,
                 index=def_job_id,
-                format_func=lambda x: f"{x}: {jobs[x].name}",
+                format_func=lambda x: f"{x}: ({jobs.loc[x, 'ROME']}) {jobs.loc[x, 'title']}",
                 )
         (col1, col2) = st.columns(2)
 
@@ -96,7 +97,7 @@ indiv_skills_nonzero = (indiv_skills.loc[indiv_skills.weight > 0, :]
 with st.expander("Expériences (détails)"):
     st.table(
             experience_weights
-            .assign(Nom=[jobs[i].name for i in experience_weights.job_id])
+            .assign(Nom=[jobs.loc[i, "title"] for i in experience_weights.job_id])
             .rename(columns={
                 "begin": "Début",
                 "end": "Fin",
@@ -111,7 +112,7 @@ with st.expander("Expériences (détails)"):
 with st.expander("Compétences (détails)"):
     st.table(
             indiv_skills_nonzero
-            .assign(Nom=[skills[i].name for i in indiv_skills_nonzero.index])
+            .assign(Nom=[skills.loc[i, "title"] for i in indiv_skills_nonzero.index])
             .rename(columns={"weight": "Importance"})
             .loc[:, ["Nom", "Importance"]]
     )
@@ -148,17 +149,17 @@ job_list_markdown = ""
 
 for j in most_accessible_jobs:
 
-    job_list_markdown += f"1. **{jobs[j].name}** (accessibilité du métier: {dist_job.loc[j]:.2f})\n"
+    job_list_markdown += f"1. **{jobs.loc[j, 'title']}** (accessibilité du métier: {dist_job.loc[j]:.2f})\n"
 
     job_list_markdown += f"    - En raison de votre expérience pour :\n"
     for s in skill_contrib.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
-        job_list_markdown += f"       - *{skills[s].name}*\n"
+        job_list_markdown += f"       - *{skills.loc[s, 'title']}*\n"
 
     job_list_markdown += f"    - Vous devrez développer les compétences suivantes :\n"
     for s in skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x >= 1.0].index:
         sa, scontrib = model.skill_accessibility(skill_cooc, indiv_skills)
-        job_list_markdown += f"       - *{skills[s].name}* (accessibilité de la compténce: {sa.loc[s]:.2f} car vous savez déjà "
+        job_list_markdown += f"       - *{skills.loc[s, 'title']}* (accessibilité de la compténce: {sa.loc[s]:.2f} car vous savez déjà "
         for sc in scontrib.loc[s,:].sort_values(ascending=False).loc[lambda x: x > 0].index:
-            job_list_markdown += f"*{skills[sc].name}*; "
+            job_list_markdown += f"*{skills.loc[sc, 'title']}*; "
         job_list_markdown += ")\n"
 st.write(job_list_markdown)
