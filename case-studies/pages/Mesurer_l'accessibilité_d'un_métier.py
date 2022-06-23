@@ -117,6 +117,30 @@ with st.expander("Compétences (détails)"):
     )
 
 
+st.header("On en déduit que… (changez les valeurs si vous n'êtes pas d'accord)")
+
+indiv_main_job = experience_weights.loc[lambda x: x.weight.idxmax(), "job_id"]
+indiv_main_job = st.selectbox("Votre métier de référence est :",
+        jobs.index,
+        index=jobs.index.tolist().index(indiv_main_job),
+        format_func=lambda x: f"{x}: ({jobs.loc[x, 'ROME']}) {jobs.loc[x, 'title']}"
+        )
+
+indiv_main_sector = jobs.loc[indiv_main_job, "sector"]
+indiv_main_sector = st.selectbox(f"Votre secteur d'activité principal est :",
+                sectors.index,
+                index=sectors.index.tolist().index(indiv_main_sector),
+                format_func=lambda x: f"{x}: ({sectors.loc[x, 'ROME']}) {sectors.loc[x, 'title']}",
+                )
+
+indiv_level = jobs.loc[indiv_main_job, "level"]
+indiv_level = st.number_input("Votre niveau CEC est ",
+        value = indiv_level,
+        min_value = 1,
+        max_value = 8,
+        )
+
+
 st.header("Métiers du plus accessible au moins accessible")
 
 with st.expander("Que signifie l'accessibilité d'un métier ?"):
@@ -133,31 +157,41 @@ with st.expander("Que signifie l'accessibilité d'une compétence ?"):
         Elle dépend des compétences qui sont exercées conjointement avec la compétence considérée. Par exemple, la compétence "Observer, visualiser, s'orienter" est exercée conjointement à "Aménager, entretenir un espace naturel" dans 4 métiers: Sylviculteur / Sylvicultrice, Aménagement et entretien des espaces verts, Bûcheronnage et élagage et Entretien des espaces naturels. Nous faisons l'hypothèse que si vous matriser l'une, l'autre devrait être plus facile à acquérir.
             """)
 
-indiv_main_sector = jobs.loc[
-        experience_weights.loc[lambda x: x.weight.idxmax(), "job_id"],
-        "sector"
-        ]
+same_sector_first = st.checkbox("Montrer d'abord les métiers du même secteur d'activité.", value = True)
+hide_practiced_jobs = st.checkbox("Cacher les métiers déjà exercés.", value = True)
+
+weigh_by_level_diff = st.checkbox(
+        "Pénaliser les métiers ayant un niveau CEC supérieur au vôtre.",
+        value = True)
+
+st.write("Montrer les métiers dont le niveau CEC est entre :")
+
+(c1, c2) = st.columns(2)
+
+with c1:
+    show_level_min = st.number_input("valeur minimum", value = 1)
+
+with c2:
+    show_level_max = st.number_input("Valeur maximum", value = 8)
+
 
 most_accessible_jobs = dist_job.sort_values(ascending=False)
 
-
-hide_practiced_jobs = st.checkbox("Cacher les métiers déjà exercés", value = True)
+if weigh_by_level_diff:
+    lvl_diff_weight = 1 - (jobs.loc[most_accessible_jobs.index, "level"] - indiv_level) / 8
+    lvl_diff_weight.loc[lvl_diff_weight > 1] = 1
+    most_accessible_jobs = most_accessible_jobs * lvl_diff_weight
 
 if hide_practiced_jobs:
     most_accessible_jobs = most_accessible_jobs.drop(indiv_exp.job_id)
 
-
-indiv_sector = st.selectbox(f"Votre secteur d'activité principal est :",
-                sectors.index,
-                key="indiv_sector",
-                index=sectors.index.tolist().index(indiv_main_sector),
-                format_func=lambda x: f"{x}: ({sectors.loc[x, 'ROME']}) {sectors.loc[x, 'title']}",
-                )
-
-same_sector_first = st.checkbox("Montrer d'abord les métiers du même secteur d'activité", value = True)
+most_accessible_jobs = most_accessible_jobs.loc[
+        (jobs.loc[most_accessible_jobs.index, "level"] >= show_level_min) 
+        & (jobs.loc[most_accessible_jobs.index, "level"] <= show_level_max)
+        ]
 
 if same_sector_first:
-    select_same_sector = jobs.sector == indiv_sector
+    select_same_sector = jobs.sector == indiv_main_sector
     same_sector_jobs = most_accessible_jobs.loc[select_same_sector].sort_values(ascending=False)
     other_sectors_jobs = most_accessible_jobs.loc[~select_same_sector].sort_values(ascending=False)
     most_accessible_jobs = pa.concat([same_sector_jobs, other_sectors_jobs])
@@ -177,10 +211,13 @@ for j in most_accessible_jobs.index:
     for s in skill_contrib.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
         job_list_markdown += f"       - *{skills.loc[s, 'title']}*\n"
 
+    if weigh_by_level_diff and lvl_diff_weight.loc[j] < 1:
+        job_list_markdown += f"    - Le niveau CEC du métier est supérieur au vôtre (CEC: {jobs.loc[j, 'level']})\n"
+
     job_list_markdown += f"    - Vous devrez développer les compétences suivantes :\n"
     for s in skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x >= 1.0].index:
         sa, scontrib = model.skill_accessibility(skill_cooc, indiv_skills)
-        job_list_markdown += f"       - *{skills.loc[s, 'title']}* (accessibilité de la compténce: {sa.loc[s]:.2f} car vous savez déjà "
+        job_list_markdown += f"       - *{skills.loc[s, 'title']}* (accessibilité de la compétence: {sa.loc[s]:.2f} car vous savez déjà "
         for sc in scontrib.loc[s,:].sort_values(ascending=False).loc[lambda x: x > 0].index:
             job_list_markdown += f"*{skills.loc[sc, 'title']}*; "
         job_list_markdown += ")\n"
