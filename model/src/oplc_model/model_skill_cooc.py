@@ -68,10 +68,20 @@ def mk_individual_experiences(
         }))
 
 
-def experience_weights(
+@dataclass
+class Model:
+    experiences: ExperienceWeights
+    skills: IndivSkills
+    main_job: int
+    main_sector: int
+    level: int
+
+
+def model(
         indiv_exp: IndividualExperiences,
+        jobs: Jobs,
         jobs_skills: JobsSkills,
-        ) -> tuple[ExperienceWeights, IndivSkills]:
+        ) -> Model:
 
     exp_weight = pa.DataFrame({
         "job_id": indiv_exp.loc[:, "job_id"],
@@ -124,24 +134,39 @@ def experience_weights(
                   ),
         })
 
-    return ExperienceWeights(exp_weight), IndivSkills(indiv_skills)
+    indiv_main_job = exp_weight.loc[lambda x: x.weight.idxmax(), "job_id"]
+    indiv_main_sector = jobs.loc[indiv_main_job, "sector"]
+    indiv_level = jobs.loc[indiv_main_job, "level"]
+
+    return Model(
+            experiences=ExperienceWeights(exp_weight),
+            skills=IndivSkills(indiv_skills),
+            main_job=indiv_main_job,
+            main_sector=indiv_main_sector,
+            level=indiv_level,
+            )
 
 
-JobAccessibility = NewType("JobAccessibility", pa.DataFrame)
-SkillContribution = NewType("SkillContribution", pa.DataFrame)
+
+
+@dataclass
+class JobAccessibility:
+    job_accessibility: pa.DataFrame
+    skill_contribution: pa.DataFrame
+    skill_gap: pa.DataFrame
 
 
 def job_accessibility(
+        model: Model,
         jobs_skills: JobsSkills,
-        indiv_skills: IndivSkills,
         ) -> JobAccessibility:
 
     norm_job = np.sqrt((jobs_skills ** 2).sum(axis=1))
-    norm_indiv = np.sqrt((indiv_skills.weight ** 2).sum())
+    norm_indiv = np.sqrt((model.skills.weight ** 2).sum())
 
     skill_contribution = (
             jobs_skills
-            .mul(indiv_skills.weight, axis="columns")
+            .mul(model.skills.weight, axis="columns")
             .div(norm_job * norm_indiv, axis="index")
             )
 
@@ -153,18 +178,25 @@ def job_accessibility(
             )
     skill_contribution_normalized.loc[job_access.index, :]
 
-    scaled_skill = indiv_skills.weight / indiv_skills.weight.max()
+    scaled_skill = model.skills.weight / model.skills.weight.max()
     skill_gap = (jobs_skills - scaled_skill) * jobs_skills
 
-    return job_access, skill_contribution_normalized, skill_gap
+    return JobAccessibility(
+            job_accessibility=job_access,
+            skill_contribution=skill_contribution_normalized, 
+            skill_gap=skill_gap,
+            )
 
 
-SkillAccessibility = NewType("SkillAccessibility", pa.DataFrame)
+@dataclass
+class SkillAccessibility:
+    skill_accessibility: pa.DataFrame
+    skill_contribution: pa.DataFrame
 
 
 def skill_accessibility(
+        model: Model,
         skill_cooc: SkillCooccurrence,
-        indiv_skills: IndivSkills,
         ) -> SkillAccessibility:
 
     mask = pa.DataFrame(np.ones(skill_cooc.shape),
@@ -176,11 +208,11 @@ def skill_accessibility(
     skill_cooc = skill_cooc * mask
 
     norm_skill = np.sqrt((skill_cooc ** 2).sum(axis=1))
-    norm_indiv = np.sqrt((indiv_skills.weight ** 2).sum())
+    norm_indiv = np.sqrt((model.skills.weight ** 2).sum())
 
     skill_contribution = (
             skill_cooc
-            .mul(indiv_skills.weight, axis="columns")
+            .mul(model.skills.weight, axis="columns")
             .div(norm_skill * norm_indiv, axis="index")
             )
 
@@ -192,22 +224,12 @@ def skill_accessibility(
             )
     skill_contribution_normalized.loc[skill_access.index, :]
 
-    scaled_skill = indiv_skills.weight / indiv_skills.weight.max()
+    scaled_skill = model.skills.weight / model.skills.weight.max()
     skill_gap = (skill_cooc - scaled_skill) * skill_cooc
 
-    return skill_access, skill_contribution_normalized
+    return SkillAccessibility(
+            skill_accessibility=skill_access,
+            skill_contribution=skill_contribution_normalized,
+            )
 
 
-def job_accessibility_from_experiences(
-        indiv_exp: IndividualExperiences,
-        jobs_skills: JobsSkills,
-        ) -> tuple[ExperienceWeights, IndivSkills, JobAccessibility, SkillContribution]:
-
-    exp_w, indiv_skills = experience_weights(
-        indiv_exp=indiv_exp,
-        jobs_skills=jobs_skills,
-    )
-
-    job_access, skill_contrib, skill_gap = job_accessibility(jobs_skills, indiv_skills)
-
-    return exp_w, indiv_skills, job_access, skill_contrib, skill_gap

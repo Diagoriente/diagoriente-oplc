@@ -1,6 +1,6 @@
 import networkx as nx
 import oplc_etl.pipelines.neo4j as etl
-from oplc_model import model_skill_cooc as model
+from oplc_model import model_skill_cooc as m
 import numpy as np
 import pandas as pa
 import streamlit as st
@@ -21,11 +21,11 @@ st.write("""
 
 data = etl.get_data()
 
-skills = model.mk_skills(data.skills)
-jobs = model.mk_jobs(data.jobs)
-sectors = model.mk_sectors(data.sectors)
-jobs_skills = model.mk_jobs_skills(data.jobs_skills)
-skill_cooc = model.skill_cooccurrence(jobs_skills)
+skills = m.mk_skills(data.skills)
+jobs = m.mk_jobs(data.jobs)
+sectors = m.mk_sectors(data.sectors)
+jobs_skills = m.mk_jobs_skills(data.jobs_skills)
+skill_cooc = m.skill_cooccurrence(jobs_skills)
 
 default_indiv_exp = [
         (124, datetime.fromisoformat("2018-06-01"), datetime.fromisoformat("2020-12-31")),
@@ -79,24 +79,18 @@ with st.form(key="Vos expériences"):
 
     st.form_submit_button("Obtenir des recommandations")
 
-indiv_exp = model.mk_individual_experiences(job_id, begin, end)
 
-experience_weights, indiv_skills, dist_job, skill_contrib, skill_gap = (
-        model.job_accessibility_from_experiences(
-            indiv_exp,
-            jobs_skills,
-        )
-)
+indiv_exp = m.mk_individual_experiences(job_id, begin, end)
 
-indiv_skills_nonzero = (indiv_skills.loc[indiv_skills.weight > 0, :]
-                       .sort_values(by="weight", ascending=False)
-                       )
 
+st.header("On en déduit que… (changez les valeurs si vous n'êtes pas d'accord)")
+
+indiv_model = m.model(indiv_exp, jobs, jobs_skills)
 
 with st.expander("Expériences (détails)"):
     st.table(
-            experience_weights
-            .assign(Nom=[jobs.loc[i, "title"] for i in experience_weights.job_id])
+            indiv_model.experiences
+            .assign(Nom=[jobs.loc[i, "title"] for i in indiv_model.experiences.job_id])
             .rename(columns={
                 "begin": "Début",
                 "end": "Fin",
@@ -107,8 +101,12 @@ with st.expander("Expériences (détails)"):
             .loc[:, ["Nom", "Début", "Fin", "Durée (années)", "Récence (années)", "Importance"]]
     )
 
-
 with st.expander("Compétences (détails)"):
+    indiv_skills_nonzero = (
+            indiv_model.skills.loc[indiv_model.skills.weight > 0, :]
+            .sort_values(by="weight", ascending=False)
+            )
+
     st.table(
             indiv_skills_nonzero
             .assign(Nom=[skills.loc[i, "title"] for i in indiv_skills_nonzero.index])
@@ -117,25 +115,20 @@ with st.expander("Compétences (détails)"):
     )
 
 
-st.header("On en déduit que… (changez les valeurs si vous n'êtes pas d'accord)")
-
-indiv_main_job = experience_weights.loc[lambda x: x.weight.idxmax(), "job_id"]
-indiv_main_job = st.selectbox("Votre métier de référence est :",
+indiv_model.main_job = st.selectbox("Votre métier de référence est :",
         jobs.index,
-        index=jobs.index.tolist().index(indiv_main_job),
+        index=jobs.index.tolist().index(indiv_model.main_job),
         format_func=lambda x: f"{x}: ({jobs.loc[x, 'ROME']}) {jobs.loc[x, 'title']}"
         )
 
-indiv_main_sector = jobs.loc[indiv_main_job, "sector"]
-indiv_main_sector = st.selectbox(f"Votre secteur d'activité principal est :",
+indiv_model.main_sector = st.selectbox(f"Votre secteur d'activité principal est :",
                 sectors.index,
-                index=sectors.index.tolist().index(indiv_main_sector),
+                index=sectors.index.tolist().index(indiv_model.main_sector),
                 format_func=lambda x: f"{x}: ({sectors.loc[x, 'ROME']}) {sectors.loc[x, 'title']}",
                 )
 
-indiv_level = jobs.loc[indiv_main_job, "level"]
-indiv_level = st.number_input("Votre niveau CEC est ",
-        value = indiv_level,
+indiv_model.indiv_level = st.number_input("Votre niveau CEC est ",
+        value = indiv_model.level,
         min_value = 1,
         max_value = 8,
         )
@@ -175,15 +168,18 @@ with c2:
     show_level_max = st.number_input("Valeur maximum", value = 8)
 
 
-most_accessible_jobs = dist_job.sort_values(ascending=False)
+job_access = m.job_accessibility(indiv_model, jobs_skills)
+skill_access = m.skill_accessibility(indiv_model, skill_cooc)
+
+most_accessible_jobs = job_access.job_accessibility.sort_values(ascending=False)
 
 if weigh_by_level_diff:
-    lvl_diff_weight = 1 - (jobs.loc[most_accessible_jobs.index, "level"] - indiv_level) / 8
+    lvl_diff_weight = 1 - (jobs.loc[most_accessible_jobs.index, "level"] - indiv_model.level) / 8
     lvl_diff_weight.loc[lvl_diff_weight > 1] = 1
     most_accessible_jobs = most_accessible_jobs * lvl_diff_weight
 
 if hide_practiced_jobs:
-    most_accessible_jobs = most_accessible_jobs.drop(indiv_exp.job_id)
+    most_accessible_jobs = most_accessible_jobs.drop(indiv_model.experiences.job_id)
 
 most_accessible_jobs = most_accessible_jobs.loc[
         (jobs.loc[most_accessible_jobs.index, "level"] >= show_level_min) 
@@ -191,7 +187,7 @@ most_accessible_jobs = most_accessible_jobs.loc[
         ]
 
 if same_sector_first:
-    select_same_sector = jobs.sector == indiv_main_sector
+    select_same_sector = jobs.sector == indiv_model.main_sector
     same_sector_jobs = most_accessible_jobs.loc[select_same_sector].sort_values(ascending=False)
     other_sectors_jobs = most_accessible_jobs.loc[~select_same_sector].sort_values(ascending=False)
     most_accessible_jobs = pa.concat([same_sector_jobs, other_sectors_jobs])
@@ -205,20 +201,20 @@ job_list_markdown = ""
 
 for j in most_accessible_jobs.index:
 
-    job_list_markdown += f"1. **{jobs.loc[j, 'title']}** (accessibilité du métier: {dist_job.loc[j]:.2f})\n"
+    job_list_markdown += f"1. **{jobs.loc[j, 'title']}** (accessibilité du métier: {job_access.job_accessibility.loc[j]:.2f})\n"
 
     job_list_markdown += f"    - En raison de votre expérience pour :\n"
-    for s in skill_contrib.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
+    for s in job_access.skill_contribution.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
         job_list_markdown += f"       - *{skills.loc[s, 'title']}*\n"
 
     if weigh_by_level_diff and lvl_diff_weight.loc[j] < 1:
         job_list_markdown += f"    - Le niveau CEC du métier est supérieur au vôtre (CEC: {jobs.loc[j, 'level']})\n"
 
     job_list_markdown += f"    - Vous devrez développer les compétences suivantes :\n"
-    for s in skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x >= 1.0].index:
-        sa, scontrib = model.skill_accessibility(skill_cooc, indiv_skills)
-        job_list_markdown += f"       - *{skills.loc[s, 'title']}* (accessibilité de la compétence: {sa.loc[s]:.2f} car vous savez déjà "
-        for sc in scontrib.loc[s,:].sort_values(ascending=False).loc[lambda x: x > 0].index:
+    for s in job_access.skill_gap.loc[j, :].sort_values(ascending=False).loc[lambda x: x >= 1.0].index:
+        sa = skill_access.skill_accessibility.loc[s]
+        job_list_markdown += f"       - *{skills.loc[s, 'title']}* (accessibilité de la compétence: {sa:.2f} car vous savez déjà "
+        for sc in skill_access.skill_contribution.loc[s,:].sort_values(ascending=False).loc[lambda x: x > 0].index:
             job_list_markdown += f"*{skills.loc[sc, 'title']}*; "
         job_list_markdown += ")\n"
 st.write(job_list_markdown)
