@@ -154,11 +154,19 @@ class JobAccessibility:
     job_accessibility: pa.DataFrame
     skill_contribution: pa.DataFrame
     skill_gap: pa.DataFrame
+    level_diff_weights: pa.Series
 
 
 def job_accessibility(
         model: Model,
+        jobs: Jobs,
         jobs_skills: JobsSkills,
+        same_sector_first: bool,
+        hide_practiced_jobs: bool,
+        weigh_higher_levels: bool,
+        show_level_min: int,
+        show_level_max: int,
+        n_jobs: int | None,
         ) -> JobAccessibility:
 
     norm_job = np.sqrt((jobs_skills ** 2).sum(axis=1))
@@ -173,18 +181,47 @@ def job_accessibility(
     job_access = skill_contribution.sum(axis=1)
     job_access = job_access.sort_values(ascending=False)
 
+
+    if weigh_higher_levels:
+        lvl_diff_weight = 1 - (jobs.loc[job_access.index, "level"] - model.level) / 8
+        lvl_diff_weight.loc[lvl_diff_weight > 1] = 1
+        job_access = job_access * lvl_diff_weight
+
+    if hide_practiced_jobs:
+        job_access = job_access.drop(model.experiences.job_id)
+
+    job_access = job_access.loc[
+            (jobs.loc[job_access.index, "level"] >= show_level_min) 
+            & (jobs.loc[job_access.index, "level"] <= show_level_max)
+            ]
+
+    if same_sector_first:
+        select_same_sector = jobs.sector == model.main_sector
+        same_sector_jobs = job_access.loc[select_same_sector].sort_values(ascending=False)
+        other_sectors_jobs = job_access.loc[~select_same_sector].sort_values(ascending=False)
+        job_access = pa.concat([same_sector_jobs, other_sectors_jobs])
+
+    if n_jobs is not None:
+        job_access = job_access.head(n_jobs)
+
+
     skill_contribution_normalized = (
-            skill_contribution.div(skill_contribution.sum(axis=1), axis="index")
+            skill_contribution
+            .div(skill_contribution.sum(axis=1), axis="index")
+            .loc[job_access.index, :]
             )
-    skill_contribution_normalized.loc[job_access.index, :]
 
     scaled_skill = model.skills.weight / model.skills.weight.max()
-    skill_gap = (jobs_skills - scaled_skill) * jobs_skills
+    skill_gap = (
+            (jobs_skills.loc[job_access.index, :] - scaled_skill) 
+            * jobs_skills.loc[job_access.index, :]
+            )
 
     return JobAccessibility(
             job_accessibility=job_access,
             skill_contribution=skill_contribution_normalized, 
             skill_gap=skill_gap,
+            level_diff_weights=lvl_diff_weight,
             )
 
 

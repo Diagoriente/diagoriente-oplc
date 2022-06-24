@@ -168,38 +168,25 @@ with c2:
     show_level_max = st.number_input("Valeur maximum", value = 8)
 
 
-job_access = m.job_accessibility(indiv_model, jobs_skills)
-skill_access = m.skill_accessibility(indiv_model, skill_cooc)
-
-most_accessible_jobs = job_access.job_accessibility.sort_values(ascending=False)
-
-if weigh_by_level_diff:
-    lvl_diff_weight = 1 - (jobs.loc[most_accessible_jobs.index, "level"] - indiv_model.level) / 8
-    lvl_diff_weight.loc[lvl_diff_weight > 1] = 1
-    most_accessible_jobs = most_accessible_jobs * lvl_diff_weight
-
-if hide_practiced_jobs:
-    most_accessible_jobs = most_accessible_jobs.drop(indiv_model.experiences.job_id)
-
-most_accessible_jobs = most_accessible_jobs.loc[
-        (jobs.loc[most_accessible_jobs.index, "level"] >= show_level_min) 
-        & (jobs.loc[most_accessible_jobs.index, "level"] <= show_level_max)
-        ]
-
-if same_sector_first:
-    select_same_sector = jobs.sector == indiv_model.main_sector
-    same_sector_jobs = most_accessible_jobs.loc[select_same_sector].sort_values(ascending=False)
-    other_sectors_jobs = most_accessible_jobs.loc[~select_same_sector].sort_values(ascending=False)
-    most_accessible_jobs = pa.concat([same_sector_jobs, other_sectors_jobs])
-
-
 n_recommended_jobs = st.number_input("Combien de métiers afficher ?", 1, 30, value=10, step=5)
 
-most_accessible_jobs = most_accessible_jobs.head(n_recommended_jobs)
+job_access = m.job_accessibility(
+        indiv_model,
+        jobs,
+        jobs_skills,
+        same_sector_first,
+        hide_practiced_jobs,
+        weigh_by_level_diff,
+        show_level_min,
+        show_level_max,
+        n_recommended_jobs,
+        )
+
+skill_access = m.skill_accessibility(indiv_model, skill_cooc)
 
 job_list_markdown = ""
 
-for j in most_accessible_jobs.index:
+for j in job_access.job_accessibility.index:
 
     job_list_markdown += f"1. **{jobs.loc[j, 'title']}** (accessibilité du métier: {job_access.job_accessibility.loc[j]:.2f})\n"
 
@@ -207,7 +194,7 @@ for j in most_accessible_jobs.index:
     for s in job_access.skill_contribution.loc[j, :].sort_values(ascending=False).loc[lambda x: x > 0].index:
         job_list_markdown += f"       - *{skills.loc[s, 'title']}*\n"
 
-    if weigh_by_level_diff and lvl_diff_weight.loc[j] < 1:
+    if weigh_by_level_diff and job_access.level_diff_weights.loc[j] < 1:
         job_list_markdown += f"    - Le niveau CEC du métier est supérieur au vôtre (CEC: {jobs.loc[j, 'level']})\n"
 
     job_list_markdown += f"    - Vous devrez développer les compétences suivantes :\n"
