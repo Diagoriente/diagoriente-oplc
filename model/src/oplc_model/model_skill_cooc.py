@@ -136,7 +136,7 @@ def model(
 
     indiv_main_job = exp_weight.loc[lambda x: x.weight.idxmax(), "job_id"]
     indiv_main_sector = jobs.loc[indiv_main_job, "sector"]
-    indiv_level = jobs.loc[indiv_main_job, "level"]
+    indiv_level = jobs.loc[exp_weight.job_id, "level"].max()
 
     return Model(
             experiences=ExperienceWeights(exp_weight),
@@ -166,7 +166,6 @@ def job_accessibility(
         weigh_higher_levels: bool,
         show_level_min: int,
         show_level_max: int,
-        n_jobs: int | None,
         ) -> JobAccessibility:
 
     norm_job = np.sqrt((jobs_skills ** 2).sum(axis=1))
@@ -200,10 +199,6 @@ def job_accessibility(
         same_sector_jobs = job_access.loc[select_same_sector].sort_values(ascending=False)
         other_sectors_jobs = job_access.loc[~select_same_sector].sort_values(ascending=False)
         job_access = pa.concat([same_sector_jobs, other_sectors_jobs])
-
-    if n_jobs is not None:
-        job_access = job_access.head(n_jobs)
-
 
     skill_contribution_normalized = (
             skill_contribution
@@ -270,3 +265,84 @@ def skill_accessibility(
             )
 
 
+@dataclass
+class SkillSensitivity:
+    avg_job_accessibility_derivative: pa.Series
+    job_accessibility_derivative: pa.DataFrame
+
+def skill_sensitivity(
+        model: Model,
+        jobs_skills: JobsSkills,
+        job_accessibility: JobAccessibility,
+        ):
+    r"""
+    Job accessibility sensitivity to skill variation. Returns the partial 
+    derivative of the average job accessibility with respect to skill s_i:
+
+    .. math::
+        \frac{d}{d_{s_i}}
+        \frac{1}{n_j}
+        \sum_{\vec j} \frac{\vec j \cdot \vec s}{\lvert \vec j \rvert \lvert \vec s \rvert}
+
+    where n_j is the number of jobs, \vec j a job vector and \vec s the user
+    skill vector, j_i and s_i are the value for skill i respectively for the
+    job \vec j and the user skills \vec s.
+
+    Computing the derivative gives:
+
+    .. math::
+
+        \frac{1}{n_j}
+        \sum_{\vec j}
+        \frac{1}{\lvert \vec j \rvert}
+        \left(
+            \frac{j_i}{\left| \vec s \right|}
+            -
+            \frac{s_i \sum_i' j_i s_i}{\left| \vec s \right|^3}
+        \right)
+
+    """
+
+    norm_job = np.sqrt((jobs_skills ** 2).sum(axis=1))
+    norm_skills = np.sqrt((model.skills.weight ** 2).sum())
+
+    # Dot product of each job vector and the individual's skill vector
+    job_dot_skill = (
+            jobs_skills
+            .mul(model.skills.weight, axis="columns")
+            .sum(axis="columns")
+            )
+
+    job_accessibility_derivative = pa.DataFrame(
+            np.empty((len(model.skills), len(jobs_skills))),
+            index = model.skills.index,
+            columns = jobs_skills.index,
+            )
+
+    # Compute the derivative for each individual skill
+    for i in model.skills.index:
+        s_i = model.skills.weight.loc[i]
+        j_i = jobs_skills.loc[:, i]
+
+        job_accessibility_derivative.loc[i, :] = (
+                ((j_i / norm_skills)
+                 - (s_i * job_dot_skill / (norm_skills ** 3))
+                 )
+                * job_accessibility.level_diff_weights
+                * job_accessibility.job_accessibility
+                )
+
+    avg_job_accessibility_derivative = (
+            job_accessibility_derivative
+            .mean(axis="columns")
+            .sort_values(ascending=False)
+            )
+
+    job_accessibility_derivative = job_accessibility_derivative.loc[
+            avg_job_accessibility_derivative.index,
+            :]
+
+    return SkillSensitivity(
+            avg_job_accessibility_derivative=avg_job_accessibility_derivative,
+            job_accessibility_derivative=job_accessibility_derivative,
+            )

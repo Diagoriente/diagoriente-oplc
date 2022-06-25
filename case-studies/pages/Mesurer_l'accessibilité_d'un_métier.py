@@ -179,14 +179,13 @@ job_access = m.job_accessibility(
         weigh_by_level_diff,
         show_level_min,
         show_level_max,
-        n_recommended_jobs,
         )
 
 skill_access = m.skill_accessibility(indiv_model, skill_cooc)
 
 job_list_markdown = ""
 
-for j in job_access.job_accessibility.index:
+for j in job_access.job_accessibility.index[:n_recommended_jobs]:
 
     job_list_markdown += f"1. **{jobs.loc[j, 'title']}** (accessibilité du métier: {job_access.job_accessibility.loc[j]:.2f})\n"
 
@@ -205,3 +204,32 @@ for j in job_access.job_accessibility.index:
             job_list_markdown += f"*{skills.loc[sc, 'title']}*; "
         job_list_markdown += ")\n"
 st.write(job_list_markdown)
+
+
+
+st.header("Les compétences à développer pour accéder à d'avantage de métiers")
+
+with st.expander("Qu'est-ce que ça signifie ?"):
+    st.write("Bla bla bla.")
+
+skill_sensit = m.skill_sensitivity(indiv_model, jobs_skills, job_access)
+
+n_recommended_skills = st.number_input("Combien de compétences afficher ?", 1, 30, value=10, step=5)
+
+markdown = ""
+
+ajad = skill_sensit.avg_job_accessibility_derivative
+jad = skill_sensit.job_accessibility_derivative
+
+for s in ajad.index[:n_recommended_skills]:
+
+    markdown += f"1. **{skills.loc[s, 'title'].strip()}** ({ajad.loc[s]:+.6f})\n"
+    markdown += f"    - En approfondissant cette compétence, vous augmentez l'accessibilité des métiers suivants :\n"
+
+    jobs_with_increased_access = jad.loc[s, :].sort_values(ascending=False).loc[lambda x: x > 0].index
+
+    for j in jobs_with_increased_access:
+        markdown += f"        - {jobs.loc[j, 'ROME']} {jobs.loc[j, 'title']} ({jad.loc[s, j]:+.2f})\n"
+
+
+st.write(markdown)
