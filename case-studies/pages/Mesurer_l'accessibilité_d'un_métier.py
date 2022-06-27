@@ -1,3 +1,4 @@
+from os import fdopen
 import networkx as nx
 import oplc_etl.pipelines.neo4j as etl
 from oplc_model import model_skill_cooc as m
@@ -162,10 +163,12 @@ st.write("Montrer les métiers dont le niveau CEC est entre :")
 (c1, c2) = st.columns(2)
 
 with c1:
-    show_level_min = st.number_input("valeur minimum", value = 1)
+    show_level_min = st.number_input("Valeur minimum", value=1,
+                                     min_value=1, max_value=8)
 
 with c2:
-    show_level_max = st.number_input("Valeur maximum", value = 8)
+    show_level_max = st.number_input("Valeur maximum", value = 8,
+                                     min_value=1, max_value=8)
 
 
 n_recommended_jobs = st.number_input("Combien de métiers afficher ?", 1, 30, value=10, step=5)
@@ -209,27 +212,48 @@ st.write(job_list_markdown)
 
 st.header("Les compétences à développer pour accéder à d'avantage de métiers")
 
-with st.expander("Qu'est-ce que ça signifie ?"):
-    st.write("Bla bla bla.")
+with st.expander("De quoi s'agit-il ?"):
+    st.write("""
+    Les compétences ci-dessous sont celles qui vous aideront le plus à accéder
+    à d'avantage de métiers si vous les développez.
+    """)
 
-skill_sensit = m.skill_sensitivity(indiv_model, jobs_skills, job_access)
+weigh_by_job_accessibility = st.checkbox(
+        "Privilégier les métiers les plus accessibles.",
+        value = True)
+
+with st.expander("Qu'est-ce que ça veut dire ?"):
+    st.write("""
+    En privilégiant les métiers les plus accessibles, vous verrez d'abord les
+    compétences qui vous guideront vers des métiers plus
+    faciles à exercer étant donné vos compétences.
+
+    Dans le cas contraire, vous verrez aussi les compétences qui vous
+    orienteront vers des métiers qui ne correspondent pas à vos compétences
+    actuelles.
+
+    Décochez cette case si vous souhaitez développer des compétences
+    pour changer complètement de voie !
+    """)
+
+
+skill_potential = m.skill_potential(indiv_model, jobs_skills, job_access,
+        weigh_by_level_diff, weigh_by_job_accessibility)
 
 n_recommended_skills = st.number_input("Combien de compétences afficher ?", 1, 30, value=10, step=5)
 
 markdown = ""
 
-ajad = skill_sensit.avg_job_accessibility_derivative
-jad = skill_sensit.job_accessibility_derivative
+for s in skill_potential.average.index[:n_recommended_skills]:
 
-for s in ajad.index[:n_recommended_skills]:
-
-    markdown += f"1. **{skills.loc[s, 'title'].strip()}** ({ajad.loc[s]:+.6f})\n"
+    markdown += f"1. **{skills.loc[s, 'title'].strip()}** ({skill_potential.average.loc[s]:+.6f})\n"
     markdown += f"    - En approfondissant cette compétence, vous augmentez l'accessibilité des métiers suivants :\n"
 
-    jobs_with_increased_access = jad.loc[s, :].sort_values(ascending=False).loc[lambda x: x > 0].index
+    jobs_with_increased_access = skill_potential.per_job.loc[s, :].sort_values(ascending=False).loc[lambda x: x > 0].index
+    # jobs_with_increased_access = job_access.job_accessibility.sort_values(ascending=False).loc[lambda x: x > 0].index
 
     for j in jobs_with_increased_access:
-        markdown += f"        - {jobs.loc[j, 'ROME']} {jobs.loc[j, 'title']} ({jad.loc[s, j]:+.2f})\n"
+        markdown += f"        - {jobs.loc[j, 'title']} (potentiel {skill_potential.per_job.loc[s, j]:+.2f}; accessibilité actuelle {job_access.job_accessibility.loc[j]:.2f})\n"
 
 
 st.write(markdown)

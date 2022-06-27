@@ -163,7 +163,7 @@ def job_accessibility(
         jobs_skills: JobsSkills,
         same_sector_first: bool,
         hide_practiced_jobs: bool,
-        weigh_higher_levels: bool,
+        weigh_by_level_diff: bool,
         show_level_min: int,
         show_level_max: int,
         ) -> JobAccessibility:
@@ -181,7 +181,7 @@ def job_accessibility(
     job_access = job_access.sort_values(ascending=False)
 
 
-    if weigh_higher_levels:
+    if weigh_by_level_diff:
         lvl_diff_weight = 1 - (jobs.loc[job_access.index, "level"] - model.level) / 8
         lvl_diff_weight.loc[lvl_diff_weight > 1] = 1
         job_access = job_access * lvl_diff_weight
@@ -265,19 +265,13 @@ def skill_accessibility(
             )
 
 
-@dataclass
-class SkillSensitivity:
-    avg_job_accessibility_derivative: pa.Series
-    job_accessibility_derivative: pa.DataFrame
-
-def skill_sensitivity(
+def job_accessibility_derivative(
         model: Model,
         jobs_skills: JobsSkills,
-        job_accessibility: JobAccessibility,
         ):
     r"""
     Job accessibility sensitivity to skill variation. Returns the partial 
-    derivative of the average job accessibility with respect to skill s_i:
+    derivative of each job accessibility with respect to skill s_i:
 
     .. math::
         \frac{d}{d_{s_i}}
@@ -325,24 +319,49 @@ def skill_sensitivity(
         j_i = jobs_skills.loc[:, i]
 
         job_accessibility_derivative.loc[i, :] = (
-                ((j_i / norm_skills)
+                (j_i / norm_skills)
                  - (s_i * job_dot_skill / (norm_skills ** 3))
-                 )
-                * job_accessibility.level_diff_weights
-                * job_accessibility.job_accessibility
-                )
+        )
 
-    avg_job_accessibility_derivative = (
-            job_accessibility_derivative
-            .mean(axis="columns")
-            .sort_values(ascending=False)
-            )
+    return job_accessibility_derivative
 
-    job_accessibility_derivative = job_accessibility_derivative.loc[
-            avg_job_accessibility_derivative.index,
-            :]
 
-    return SkillSensitivity(
-            avg_job_accessibility_derivative=avg_job_accessibility_derivative,
-            job_accessibility_derivative=job_accessibility_derivative,
-            )
+
+@dataclass
+class SkillPotential:
+    per_job: pa.DataFrame
+    average: pa.Series
+
+def skill_potential(
+        model: Model,
+        jobs_skills: JobsSkills,
+        job_accessibility: JobAccessibility,
+        weigh_by_level_diff: bool,
+        weigh_by_job_accessibility: bool,
+        ):
+
+    per_job = job_accessibility_derivative(model, jobs_skills)
+
+    # Compute the derivative for each individual skill
+    for i in model.skills.index:
+        s_i = model.skills.weight.loc[i]
+        j_i = jobs_skills.loc[:, i]
+
+
+        if weigh_by_level_diff:
+            per_job.loc[i, :] = (
+                    per_job.loc[i, :]
+                    * job_accessibility.level_diff_weights
+                    )
+
+        if weigh_by_job_accessibility:
+            per_job.loc[i, :] = (
+                    per_job.loc[i, :]
+                    * job_accessibility.job_accessibility
+                    )
+
+    average = per_job.mean(axis="columns").sort_values(ascending=False)
+
+    per_job = per_job.loc[average.index, :]
+
+    return SkillPotential(per_job=per_job, average=average)
