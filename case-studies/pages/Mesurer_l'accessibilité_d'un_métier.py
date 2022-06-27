@@ -246,14 +246,14 @@ markdown = ""
 
 for s in skill_potential.average.index[:n_recommended_skills]:
 
-    markdown += f"1. **{skills.loc[s, 'title'].strip()}** ({skill_potential.average.loc[s]:+.6f})\n"
+    markdown += f"1. **{skills.loc[s, 'title'].strip()}**\n"
     markdown += f"    - En approfondissant cette compétence, vous augmentez l'accessibilité des métiers suivants :\n"
 
     jobs_with_increased_access = skill_potential.per_job.loc[s, :].sort_values(ascending=False).loc[lambda x: x > 0].index
     # jobs_with_increased_access = job_access.job_accessibility.sort_values(ascending=False).loc[lambda x: x > 0].index
 
     for j in jobs_with_increased_access:
-        markdown += f"        - {jobs.loc[j, 'title']} (potentiel {skill_potential.per_job.loc[s, j]:+.2f}; accessibilité actuelle {job_access.job_accessibility.loc[j]:.2f})\n"
+        markdown += f"        - {jobs.loc[j, 'title']}\n"
 
 
 st.write(markdown)
