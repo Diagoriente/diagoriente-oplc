@@ -99,24 +99,20 @@ for i in range(len(st.session_state.exp_input_job_id)):
 
 st.button("Ajouter une expérience", on_click=add_exp_input)
 
-# st.form_submit_button("Obtenir des recommandations de métiers et compétences")
+
+update_exp_input = st.button("Mettre à jour les recommandations ci-dessous")
+
+if not update_exp_input or 'indiv_exp' not in st.session_state:
+    st.session_state.indiv_exp = m.mk_individual_experiences(
+            st.session_state.exp_input_job_id,
+            st.session_state.exp_input_begin,
+            st.session_state.exp_input_end,
+            )
 
 
-indiv_exp = m.mk_individual_experiences(
-        st.session_state.exp_input_job_id,
-        st.session_state.exp_input_begin,
-        st.session_state.exp_input_end,
-        )
+st.header("On en déduit que… (changez ce que vous voulez)")
 
-
-update_reco = st.button("Obtenir des recommandations de métiers et de compétences")
-
-if not update_reco:
-    st.stop()
-
-st.header("On en déduit que… (changez les valeurs si vous n'êtes pas d'accord)")
-
-indiv_model = m.model(indiv_exp, jobs, jobs_skills)
+indiv_model = m.model(st.session_state.indiv_exp, jobs, jobs_skills)
 
 with st.expander("Expériences (détails)"):
     st.table(
