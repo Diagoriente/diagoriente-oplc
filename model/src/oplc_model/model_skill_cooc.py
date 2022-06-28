@@ -216,7 +216,7 @@ def job_accessibility(
             job_accessibility=job_access,
             skill_contribution=skill_contribution_normalized, 
             skill_gap=skill_gap,
-            level_diff_weights=lvl_diff_weight,
+            level_diff_weights=lvl_diff_weight if weigh_by_level_diff else None,
             )
 
 
