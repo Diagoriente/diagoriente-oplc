@@ -1,3 +1,4 @@
+from pathlib import Path
 from os import fdopen
 import networkx as nx
 import oplc_etl.pipelines.neo4j as etl
@@ -20,13 +21,22 @@ st.write("""
         d'autres métiers qui correspondent à vos compétences.
 """)
 
-data = etl.get_data()
 
-skills = m.mk_skills(data.skills)
-jobs = m.mk_jobs(data.jobs)
-sectors = m.mk_sectors(data.sectors)
-jobs_skills = m.mk_jobs_skills(data.jobs_skills)
-skill_cooc = m.skill_cooccurrence(jobs_skills)
+@st.cache(max_entries=1)
+def get_data():
+    data = etl.get_data()
+
+    skills = m.mk_skills(data.skills)
+    jobs = m.mk_jobs(data.jobs)
+    sectors = m.mk_sectors(data.sectors)
+    jobs_skills = m.mk_jobs_skills(data.jobs_skills)
+    skill_cooc = m.skill_cooccurrence(jobs_skills)
+
+    return (skills, jobs, sectors, jobs_skills, skill_cooc)
+
+skills, jobs, sectors, jobs_skills, skill_cooc = get_data()
+
+
 
 default_indiv_exp = [
         (124, datetime.fromisoformat("2018-06-01"), datetime.fromisoformat("2020-12-31")),
@@ -34,55 +44,75 @@ default_indiv_exp = [
         (126, datetime.fromisoformat("2022-01-01"), datetime.fromisoformat("2022-05-31")),
         ]
 
-indiv_exp_count = st.number_input(
-        "Combien d'expériences voulez-vous renseigner ?",
-        min_value=0,
-        max_value=None,
-        value=len(default_indiv_exp))
+if 'exp_input_job_id' not in st.session_state:
+    st.session_state.exp_input_job_id = [124,125,126]
+    st.session_state.exp_input_begin = [datetime.fromisoformat("2018-06-01"),
+                                        datetime.fromisoformat("2020-01-01"),
+                                        datetime.fromisoformat("2022-01-01"),
+                                        ]
+    st.session_state.exp_input_end = [datetime.fromisoformat("2020-12-31"),
+                                      datetime.fromisoformat("2021-12-31"),
+                                      datetime.fromisoformat("2022-05-31"),
+                                      ]
 
-with st.form(key="Vos expériences"):
-    job_id = np.empty(int(indiv_exp_count), dtype=int)
-    begin = np.empty(int(indiv_exp_count), dtype=datetime)
-    end = np.empty(int(indiv_exp_count), dtype=datetime)
+
+def add_exp_input():
+    st.session_state.exp_input_job_id.append(124)
+    st.session_state.exp_input_begin.append(datetime.fromisoformat("2018-06-01"))
+    st.session_state.exp_input_end.append(datetime.fromisoformat("2020-12-31"))
 
 
-    for i in range(int(indiv_exp_count)):
+def rm_exp_input(i: int):
+    st.session_state.exp_input_job_id.pop(i)
+    st.session_state.exp_input_begin.pop(i)
+    st.session_state.exp_input_end.pop(i)
 
-        if i < len(default_indiv_exp):
-            (def_job_id, def_begin, def_end) = default_indiv_exp[i]
-        else:
-            def_job_id = 0
-            def_begin = None
-            def_end = None
 
-        st.subheader(f"Expérience {i+1}")
-        job_id[i] = st.selectbox(f"Intitulé",
-                jobs.index,
+st.header("Quelles sont vos expériences professionnelles ?")
+
+for i in range(len(st.session_state.exp_input_job_id)):
+
+    st.subheader(f"Expérience {i+1}")
+    st.session_state.exp_input_job_id[i] = st.selectbox(f"Intitulé",
+            jobs.index,
+            index=jobs.index.tolist().index(st.session_state.exp_input_job_id[i]),
+            key=i,
+            format_func=lambda x: f"(ROME {jobs.loc[x, 'ROME']}) {jobs.loc[x, 'title']}",
+            )
+    (col1, col2) = st.columns(2)
+
+    with col1:
+        st.session_state.exp_input_begin[i] = st.date_input(
+                "Date de début",
                 key=i,
-                index=jobs.index.tolist().index(def_job_id),
-                format_func=lambda x: f"{x}: ({jobs.loc[x, 'ROME']}) {jobs.loc[x, 'title']}",
+                value=st.session_state.exp_input_begin[i],
                 )
-        (col1, col2) = st.columns(2)
 
-        with col1:
-            begin[i] = st.date_input(
-                    "Date de début",
-                    key=i,
-                    value=def_begin
-                    )
+    with col2:
+        st.session_state.exp_input_end[i] = st.date_input(
+                "Date de fin",
+                key=i,
+                value=st.session_state.exp_input_end[i],
+                )
 
-        with col2:
-            end[i] = st.date_input(
-                    "Date de fin",
-                    key=i,
-                    value=def_end
-                    )
+    st.button("Supprimer cette expérience", key=i, on_click=rm_exp_input, args=(i,))
 
-    st.form_submit_button("Obtenir des recommandations")
+st.button("Ajouter une expérience", on_click=add_exp_input)
+
+# st.form_submit_button("Obtenir des recommandations de métiers et compétences")
 
 
-indiv_exp = m.mk_individual_experiences(job_id, begin, end)
+indiv_exp = m.mk_individual_experiences(
+        st.session_state.exp_input_job_id,
+        st.session_state.exp_input_begin,
+        st.session_state.exp_input_end,
+        )
 
+
+update_reco = st.button("Obtenir des recommandations de métiers et de compétences")
+
+if not update_reco:
+    st.stop()
 
 st.header("On en déduit que… (changez les valeurs si vous n'êtes pas d'accord)")
 

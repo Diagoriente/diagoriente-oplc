@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import numpy as np
 import pandas as pa
 from neo4j import GraphDatabase
@@ -12,12 +13,33 @@ neo4jURI=os.getenv("NEO4J_URI")
 neo4jUser=os.getenv("NEO4J_USER")
 neo4jPass=os.getenv("NEO4J_PASS")
 
+default_cache_dir = Path("/tmp/diagoriente-oplc/data")
 
-def get_data():
+
+def download_data_to_disk(dir: Path = default_cache_dir):
+    result = get_data(cache_dir=None)
+
+    dir.mkdir(parents=True, exist_ok=True)
+
+    result.jobs.to_csv(dir/"jobs.csv")
+    result.skills.to_csv(dir/"skills.csv")
+    result.sectors.to_csv(dir/"sectors.csv")
+    result.jobs_skills.to_csv(dir/"jobs_skills.csv")
+
+
+def get_data(cache_dir: Path | None = None):
     result = None
 
-    with driver() as d:
-        result = get_job_skill_data(d)
+    if cache_dir is None:
+        with driver() as d:
+            result = get_job_skill_data(d)
+    else:
+        result = Result(
+                jobs=pa.read_csv(cache_dir/"jobs.csv"),
+                skills=pa.read_csv(cache_dir/"skills.csv"),
+                sectors=pa.read_csv(cache_dir/"sectors.csv"),
+                jobs_skills=pa.read_csv(cache_dir/"jobs_skills.csv"),
+                )
 
     return result
 
@@ -119,7 +141,6 @@ def get_job_skill_data(driver):
     for (j,s) in edges:
         if j in jobs.index and s in skills.index:
             jobs_skills.loc[j, s] = 1
-
 
     return Result(
             jobs=jobs,
