@@ -1,13 +1,13 @@
 FROM python:3.10
 
-COPY case-studies/Pipfile.lock /app/case-studies/Pipfile.lock
+COPY ui/Pipfile.lock /app/ui/Pipfile.lock
 COPY model /app/model
 COPY etl /app/etl
-WORKDIR /app/case-studies
+WORKDIR /app/ui
 RUN python -m pip install --no-cache-dir --upgrade pipenv
 RUN pipenv sync
 
-COPY case-studies /app/case-studies
+COPY ui /app/ui
 
 ENV PYTHONPATH "."
 
